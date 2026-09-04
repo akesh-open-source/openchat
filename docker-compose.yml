@@ -1,0 +1,75 @@
+# Auth owns its own PostgreSQL instance/database.
+# Chat will get a separate database later — do not share this one.
+#
+# Env files:
+#   app/auth/.env    — postgres-auth + auth (see app/auth/.env.example)
+#   app/gateway/.env — gateway (see app/gateway/.env.example)
+#
+# Networks:
+#   auth-internal — postgres-auth ↔ auth only (DB not reachable from gateway)
+#   edge          — gateway ↔ auth (and later other services)
+
+services:
+  postgres-auth:
+    image: postgres:16-alpine
+    env_file:
+      - app/auth/.env
+    volumes:
+      - postgres_auth_data:/var/lib/postgresql/data
+    networks:
+      - auth-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Internal only — not published to the host.
+
+  auth:
+    build:
+      context: .
+      dockerfile: app/auth/Dockerfile
+    env_file:
+      - app/auth/.env
+    ports:
+      - "8001:8001"
+    networks:
+      - auth-internal
+      - edge
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/openapi.json')",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  gateway:
+    build:
+      context: .
+      dockerfile: app/gateway/Dockerfile
+    env_file:
+      - app/gateway/.env
+    ports:
+      - "8000:8000"
+    networks:
+      - edge
+    depends_on:
+      auth:
+        condition: service_healthy
+
+networks:
+  auth-internal:
+    internal: true
+  edge:
+
+volumes:
+  postgres_auth_data:
