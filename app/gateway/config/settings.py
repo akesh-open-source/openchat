@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     # Upstream services (edge routing only — no business DB here).
     auth_service_url: str = "http://localhost:8001"
 
+    # Must match auth service JWT settings (AUTH_JWT_*).
+    jwt_secret: str = "change-me-use-a-long-random-secret"
+    jwt_algorithm: str = "HS256"
+
     # Outbound HTTP client.
     http_timeout_seconds: float = 30.0
 

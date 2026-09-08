@@ -28,5 +28,11 @@ class Settings(BaseSettings):
     db_pool_timeout: int = 30
     db_pool_recycle: int = 1800
 
+    # JWT — override secret in every non-local environment.
+    jwt_secret: str = "change-me-use-a-long-random-secret"
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 15
+    refresh_token_expire_days: int = 7
+
 
 settings = Settings()
