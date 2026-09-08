@@ -7,18 +7,32 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.application.ports.password_hasher import PasswordHasher
 from app.auth.application.ports.repositories.user_repository import UserRepository
+from app.auth.application.ports.token_issuer import TokenIssuer
+from app.auth.application.services.login_service import LoginService
 from app.auth.application.services.registration_service import RegistrationService
+from app.auth.config.settings import settings
 from app.auth.infrastructure.persistence.postgres.session import get_session
 from app.auth.infrastructure.persistence.postgres.user_repository import (
     PostgresUserRepository,
 )
+from app.auth.infrastructure.security.jwt_token_issuer import JwtTokenIssuer
 from app.auth.infrastructure.security.password_hasher import Argon2PasswordHasher
 
 _password_hasher = Argon2PasswordHasher()
+_token_issuer = JwtTokenIssuer(
+    secret=settings.jwt_secret,
+    algorithm=settings.jwt_algorithm,
+    access_token_expire_minutes=settings.access_token_expire_minutes,
+    refresh_token_expire_days=settings.refresh_token_expire_days,
+)
 
 
 def get_password_hasher() -> PasswordHasher:
     return _password_hasher
+
+
+def get_token_issuer() -> TokenIssuer:
+    return _token_issuer
 
 
 def get_user_repository(
@@ -34,4 +48,16 @@ def get_registration_service(
     return RegistrationService(
         user_repository=user_repository,
         password_hasher=password_hasher,
+    )
+
+
+def get_login_service(
+    user_repository: Annotated[UserRepository, Depends(get_user_repository)],
+    password_hasher: Annotated[PasswordHasher, Depends(get_password_hasher)],
+    token_issuer: Annotated[TokenIssuer, Depends(get_token_issuer)],
+) -> LoginService:
+    return LoginService(
+        user_repository=user_repository,
+        password_hasher=password_hasher,
+        token_issuer=token_issuer,
     )
