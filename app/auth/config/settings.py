@@ -33,6 +33,20 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 7
+    password_reset_token_expire_minutes: int = 30
+
+    # SMTP email delivery (use Mailpit locally: host=mailpit, port=1025).
+    smtp_host: str = "localhost"
+    smtp_port: int = 1025
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_use_tls: bool = False
+    smtp_use_ssl: bool = False
+    smtp_from_email: str = "noreply@openchat.local"
+    smtp_from_name: str = "OpenChat"
+    # Link bases used in transactional emails (frontend or docs URL).
+    password_reset_url_base: str = "http://localhost:8000/docs"
+    login_url: str = "http://localhost:8000/docs"
 
 
 settings = Settings()
