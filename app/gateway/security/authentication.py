@@ -6,10 +6,7 @@ import jwt
 from fastapi import Request
 
 from app.gateway.config.settings import settings
-from app.gateway.exceptions.errors import (
-    InvalidAccessTokenError,
-    UnauthenticatedError,
-)
+from app.gateway.exceptions.errors import InvalidTokenError, UnauthenticatedError
 
 
 def extract_bearer_token(request: Request) -> str:
@@ -32,16 +29,16 @@ def verify_access_token(token: str) -> UUID:
             algorithms=[settings.jwt_algorithm],
         )
     except jwt.PyJWTError as exc:
-        raise InvalidAccessTokenError("Invalid or expired access token") from exc
+        raise InvalidTokenError("Invalid or expired access token") from exc
 
     if payload.get("type") != "access":
-        raise InvalidAccessTokenError("Invalid or expired access token")
+        raise InvalidTokenError("Invalid or expired access token")
 
     subject = payload.get("sub")
     if not subject:
-        raise InvalidAccessTokenError("Invalid or expired access token")
+        raise InvalidTokenError("Invalid or expired access token")
 
     try:
         return UUID(subject)
     except ValueError as exc:
-        raise InvalidAccessTokenError("Invalid or expired access token") from exc
+        raise InvalidTokenError("Invalid or expired access token") from exc

@@ -12,6 +12,19 @@ from app.gateway.presentation.http.dependencies import get_upstream_client
 
 logger = logging.getLogger(__name__)
 
+# Auth routes that must stay public (no edge Bearer requirement).
+# Gateway currently proxies all /auth/* without JWT checks; keep this list
+# as the source of truth when protecting future non-public auth paths.
+PUBLIC_AUTH_PATHS = frozenset(
+    {
+        "initiate-register",
+        "complete-register",
+        "login",
+        "forgot-password",
+        "reset-password",
+    }
+)
+
 # Hop-by-hop headers must not be forwarded (RFC 7230).
 _HOP_BY_HOP = frozenset(
     {
@@ -57,9 +70,10 @@ async def proxy_auth(
             params=request.query_params,
         )
     except RequestError as exc:
-        logger.warning("Auth upstream request failed: %s", exc)
+        logger.warning("Auth upstream request failed path=%s error=%s", path, exc)
         raise UpstreamUnavailableError("auth") from exc
 
+    # Forward upstream status/body as-is (incl. auth domain 400/401/409).
     return Response(
         content=upstream.content,
         status_code=upstream.status_code,
