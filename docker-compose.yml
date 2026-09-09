@@ -6,7 +6,7 @@
 #   app/gateway/.env — gateway (see app/gateway/.env.example)
 #
 # Networks:
-#   auth-internal — postgres-auth ↔ auth only (DB not reachable from gateway)
+#   auth-internal — postgres-auth ↔ auth-redis ↔ auth (DB/cache not on edge)
 #   edge          — gateway ↔ auth ↔ mailpit (and later other services)
 
 services:
@@ -24,6 +24,17 @@ services:
       timeout: 5s
       retries: 10
     # Internal only — not published to the host.
+
+  auth-redis:
+    image: redis:7-alpine
+    networks:
+      - auth-internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # no host ports — internal only
 
   mailpit:
     image: axllent/mailpit:latest
@@ -46,6 +57,8 @@ services:
       - edge
     depends_on:
       postgres-auth:
+        condition: service_healthy
+      auth-redis:
         condition: service_healthy
       mailpit:
         condition: service_started

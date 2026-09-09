@@ -5,6 +5,10 @@ from app.auth.application.ports.email_template_renderer import (
 )
 from app.auth.application.ports.event_publisher import EventPublisher
 from app.auth.application.ports.password_hasher import PasswordHasher
+from app.auth.application.ports.pending_registration_store import (
+    PendingRegistration,
+    PendingRegistrationStore,
+)
 from app.auth.application.ports.token_issuer import TokenIssuer, TokenPair
 
 __all__ = [
@@ -12,6 +16,8 @@ __all__ = [
     "EmailTemplateRenderer",
     "EventPublisher",
     "PasswordHasher",
+    "PendingRegistration",
+    "PendingRegistrationStore",
     "RenderedEmail",
     "TokenIssuer",
     "TokenPair",

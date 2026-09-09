@@ -26,6 +26,18 @@ class EmailTemplateRenderer(Protocol):
     ) -> RenderedEmail:
         ...
 
+    def render_register_verification(
+        self,
+        *,
+        app_name: str,
+        email: str,
+        display_name: str,
+        verify_link: str,
+        verify_token: str,
+        expires_minutes: int,
+    ) -> RenderedEmail:
+        ...
+
     def render_register_user(
         self,
         *,

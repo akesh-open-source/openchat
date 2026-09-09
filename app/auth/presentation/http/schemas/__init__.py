@@ -7,17 +7,21 @@ from app.auth.presentation.http.schemas.login import (
     LoginUserResponse,
 )
 from app.auth.presentation.http.schemas.register import (
-    RegisterUserRequest,
-    RegisterUserResponse,
+    CompleteRegisterRequest,
+    CompleteRegisterResponse,
+    InitiateRegisterRequest,
+    InitiateRegisterResponse,
 )
 from app.auth.presentation.http.schemas.reset_password import ResetPasswordRequest
 
 __all__ = [
+    "CompleteRegisterRequest",
+    "CompleteRegisterResponse",
     "ForgotPasswordRequest",
     "ForgotPasswordResponse",
+    "InitiateRegisterRequest",
+    "InitiateRegisterResponse",
     "LoginUserRequest",
     "LoginUserResponse",
-    "RegisterUserRequest",
-    "RegisterUserResponse",
     "ResetPasswordRequest",
 ]

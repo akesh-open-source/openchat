@@ -50,6 +50,34 @@ class JinjaEmailTemplateRenderer:
             html_body=self._env.get_template("password_reset.html").render(context),
         )
 
+    def render_register_verification(
+        self,
+        *,
+        app_name: str,
+        email: str,
+        display_name: str,
+        verify_link: str,
+        verify_token: str,
+        expires_minutes: int,
+    ) -> RenderedEmail:
+        context = {
+            "app_name": app_name,
+            "email": email,
+            "display_name": display_name,
+            "verify_link": verify_link,
+            "verify_token": verify_token,
+            "expires_minutes": expires_minutes,
+        }
+        return RenderedEmail(
+            subject=f"Verify your {app_name} email",
+            text_body=self._env.get_template("register_verification.txt").render(
+                context
+            ),
+            html_body=self._env.get_template("register_verification.html").render(
+                context
+            ),
+        )
+
     def render_register_user(
         self,
         *,

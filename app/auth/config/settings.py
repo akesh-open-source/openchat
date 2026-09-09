@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 7
     password_reset_token_expire_minutes: int = 30
+    registration_token_expire_minutes: int = 60
+
+    # Redis (pending registration tokens, etc.)
+    redis_url: str = "redis://localhost:6379/0"
 
     # SMTP email delivery (use Mailpit locally: host=mailpit, port=1025).
     smtp_host: str = "localhost"
@@ -46,6 +50,7 @@ class Settings(BaseSettings):
     smtp_from_name: str = "OpenChat"
     # Link bases used in transactional emails (frontend or docs URL).
     password_reset_url_base: str = "http://localhost:8000/docs"
+    registration_verify_url_base: str = "http://localhost:8000/docs"
     login_url: str = "http://localhost:8000/docs"
 
 

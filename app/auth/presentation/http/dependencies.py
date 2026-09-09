@@ -8,11 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.application.ports.email_sender import EmailSender
 from app.auth.application.ports.email_template_renderer import EmailTemplateRenderer
 from app.auth.application.ports.password_hasher import PasswordHasher
+from app.auth.application.ports.pending_registration_store import PendingRegistrationStore
 from app.auth.application.ports.repositories.user_repository import UserRepository
 from app.auth.application.ports.token_issuer import TokenIssuer
+from app.auth.application.services.complete_register_service import CompleteRegisterService
 from app.auth.application.services.forgot_password_service import ForgotPasswordService
+from app.auth.application.services.initiate_register_service import InitiateRegisterService
 from app.auth.application.services.login_service import LoginService
-from app.auth.application.services.registration_service import RegistrationService
 from app.auth.application.services.reset_password_service import ResetPasswordService
 from app.auth.config.settings import settings
 from app.auth.infrastructure.email.smtp_email_sender import SmtpEmailSender
@@ -20,6 +22,10 @@ from app.auth.infrastructure.email.template_renderer import JinjaEmailTemplateRe
 from app.auth.infrastructure.persistence.postgres.session import get_session
 from app.auth.infrastructure.persistence.postgres.user_repository import (
     PostgresUserRepository,
+)
+from app.auth.infrastructure.persistence.redis.client import get_redis
+from app.auth.infrastructure.persistence.redis.pending_registration_store import (
+    RedisPendingRegistrationStore,
 )
 from app.auth.infrastructure.security.jwt_token_issuer import JwtTokenIssuer
 from app.auth.infrastructure.security.password_hasher import Argon2PasswordHasher
@@ -67,18 +73,50 @@ def get_user_repository(
     return PostgresUserRepository(session)
 
 
-def get_registration_service(
+def get_pending_registration_store() -> PendingRegistrationStore:
+    return RedisPendingRegistrationStore(get_redis())
+
+
+def get_initiate_register_service(
     user_repository: Annotated[UserRepository, Depends(get_user_repository)],
     password_hasher: Annotated[PasswordHasher, Depends(get_password_hasher)],
+    pending_store: Annotated[
+        PendingRegistrationStore,
+        Depends(get_pending_registration_store),
+    ],
     email_sender: Annotated[EmailSender, Depends(get_email_sender)],
     template_renderer: Annotated[
         EmailTemplateRenderer,
         Depends(get_email_template_renderer),
     ],
-) -> RegistrationService:
-    return RegistrationService(
+) -> InitiateRegisterService:
+    return InitiateRegisterService(
         user_repository=user_repository,
         password_hasher=password_hasher,
+        pending_store=pending_store,
+        email_sender=email_sender,
+        template_renderer=template_renderer,
+        app_name=settings.app_name,
+        registration_verify_url_base=settings.registration_verify_url_base,
+        registration_token_expire_minutes=settings.registration_token_expire_minutes,
+    )
+
+
+def get_complete_register_service(
+    user_repository: Annotated[UserRepository, Depends(get_user_repository)],
+    pending_store: Annotated[
+        PendingRegistrationStore,
+        Depends(get_pending_registration_store),
+    ],
+    email_sender: Annotated[EmailSender, Depends(get_email_sender)],
+    template_renderer: Annotated[
+        EmailTemplateRenderer,
+        Depends(get_email_template_renderer),
+    ],
+) -> CompleteRegisterService:
+    return CompleteRegisterService(
+        user_repository=user_repository,
+        pending_store=pending_store,
         email_sender=email_sender,
         template_renderer=template_renderer,
         app_name=settings.app_name,
