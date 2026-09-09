@@ -5,12 +5,15 @@ from fastapi import FastAPI
 from app.auth.config.settings import settings
 from app.auth.exceptions.handlers import register_exception_handlers
 from app.auth.infrastructure.persistence.postgres.session import dispose_engine
+from app.auth.infrastructure.persistence.redis.client import close_redis, init_redis
 from app.auth.presentation.http.routes import router
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    await init_redis()
     yield
+    await close_redis()
     await dispose_engine()
 
 

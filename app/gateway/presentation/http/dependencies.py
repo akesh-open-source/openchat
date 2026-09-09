@@ -18,7 +18,7 @@ def get_upstream_client() -> AsyncClient:
 
 
 def get_current_user_id(request: Request) -> UUID:
-    """Require a valid Bearer access token issued by auth."""
+    """Require a valid Bearer access token issued by auth (edge JWT check)."""
     token = extract_bearer_token(request)
     return verify_access_token(token)
 

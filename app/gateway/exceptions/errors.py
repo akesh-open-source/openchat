@@ -12,8 +12,8 @@ class UpstreamUnavailableError(GatewayError):
 
 
 class UnauthenticatedError(GatewayError):
-    """Raised when a required Bearer token is missing."""
+    """Raised when a required Bearer token is missing or malformed."""
 
 
-class InvalidAccessTokenError(GatewayError):
+class InvalidTokenError(GatewayError):
     """Raised when a Bearer access token is invalid or expired."""

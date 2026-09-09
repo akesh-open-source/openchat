@@ -3,13 +3,13 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-from app.auth.application.commands.register_user import RegisterUserCommand
+from app.auth.application.commands.complete_register import CompleteRegisterCommand
 from app.auth.application.ports.email_sender import EmailSender
 from app.auth.application.ports.email_template_renderer import EmailTemplateRenderer
-from app.auth.application.ports.password_hasher import PasswordHasher
+from app.auth.application.ports.pending_registration_store import PendingRegistrationStore
 from app.auth.application.ports.repositories.user_repository import UserRepository
 from app.auth.domain.entities.user import User
-from app.auth.domain.exceptions import UserAlreadyExistsError
+from app.auth.domain.exceptions import InvalidTokenError, UserAlreadyExistsError
 from app.auth.domain.value_objects.display_name import DisplayName
 from app.auth.domain.value_objects.email import Email
 from app.auth.domain.value_objects.password import Password
@@ -18,32 +18,33 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
-class RegistrationService:
+class CompleteRegisterService:
     user_repository: UserRepository
-    password_hasher: PasswordHasher
+    pending_store: PendingRegistrationStore
     email_sender: EmailSender
     template_renderer: EmailTemplateRenderer
     app_name: str
     login_url: str
 
-    async def register(self, command: RegisterUserCommand) -> User:
-        email = Email(command.email)
-        display_name = DisplayName(command.display_name)
-        Password.validate_plain(command.password)
+    async def complete(self, command: CompleteRegisterCommand) -> User:
+        pending = await self.pending_store.get(command.token)
+        if pending is None:
+            raise InvalidTokenError("Invalid or expired registration token")
 
-        existing_user = await self.user_repository.get_by_email(email.value)
-        if existing_user is not None:
+        existing = await self.user_repository.get_by_email(pending.email)
+        if existing is not None:
+            await self.pending_store.delete(command.token)
             raise UserAlreadyExistsError(
-                f"User with email {email.value} already exists"
+                f"User with email {pending.email} already exists"
             )
 
-        hashed_password = self.password_hasher.hash(command.password)
         user = User.create(
-            email=email,
-            display_name=display_name,
-            password=Password(hashed_password),
+            email=Email(pending.email),
+            display_name=DisplayName(pending.display_name),
+            password=Password(pending.password_hash),
         )
         await self.user_repository.save(user)
+        await self.pending_store.delete(command.token)
         await self._send_welcome_email(user)
         return user
 

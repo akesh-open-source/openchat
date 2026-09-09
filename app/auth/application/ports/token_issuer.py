@@ -21,3 +21,11 @@ class TokenIssuer(Protocol):
     def verify_access_token(self, token: str) -> UUID:
         """Return the subject user id, or raise on invalid/expired token."""
         ...
+
+    def issue_password_reset_token(self, user_id: UUID, email: str) -> str:
+        """Return a short-lived password-reset token."""
+        ...
+
+    def verify_password_reset_token(self, token: str) -> UUID:
+        """Return the subject user id, or raise on invalid/expired reset token."""
+        ...
