@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 from app.gateway.exceptions.errors import GatewayError
@@ -17,9 +17,14 @@ def register_exception_handlers(app: FastAPI) -> None:
             type(exc),
             EXCEPTION_STATUS_MAP[GatewayError],
         )
+        headers: dict[str, str] = {}
+        if status_code == status.HTTP_401_UNAUTHORIZED:
+            headers["WWW-Authenticate"] = "Bearer"
+
         return JSONResponse(
             status_code=status_code,
             content={
                 "detail": str(exc) or exc.__class__.__name__,
             },
+            headers=headers,
         )
