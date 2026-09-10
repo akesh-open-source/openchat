@@ -24,8 +24,10 @@ from app.auth.application.services.initiate_register_service import InitiateRegi
 from app.auth.application.services.list_devices_service import ListDevicesService
 from app.auth.application.services.list_sessions_service import ListSessionsService
 from app.auth.application.services.login_service import LoginService
+from app.auth.application.services.logout_service import LogoutService
 from app.auth.application.services.refresh_token_service import RefreshTokenService
 from app.auth.application.services.reset_password_service import ResetPasswordService
+from app.auth.application.services.revoke_session_service import RevokeSessionService
 from app.auth.config.settings import settings
 from app.auth.infrastructure.email.smtp_email_sender import SmtpEmailSender
 from app.auth.infrastructure.email.template_renderer import JinjaEmailTemplateRenderer
@@ -231,6 +233,34 @@ def get_list_sessions_service(
     session_repository: Annotated[SessionRepository, Depends(get_session_repository)],
 ) -> ListSessionsService:
     return ListSessionsService(session_repository=session_repository)
+
+
+def get_logout_service(
+    token_issuer: Annotated[TokenIssuer, Depends(get_token_issuer)],
+    refresh_token_repository: Annotated[
+        RefreshTokenRepository,
+        Depends(get_refresh_token_repository),
+    ],
+    session_repository: Annotated[SessionRepository, Depends(get_session_repository)],
+) -> LogoutService:
+    return LogoutService(
+        token_issuer=token_issuer,
+        refresh_token_repository=refresh_token_repository,
+        session_repository=session_repository,
+    )
+
+
+def get_revoke_session_service(
+    session_repository: Annotated[SessionRepository, Depends(get_session_repository)],
+    refresh_token_repository: Annotated[
+        RefreshTokenRepository,
+        Depends(get_refresh_token_repository),
+    ],
+) -> RevokeSessionService:
+    return RevokeSessionService(
+        session_repository=session_repository,
+        refresh_token_repository=refresh_token_repository,
+    )
 
 
 def get_forgot_password_service(

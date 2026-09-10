@@ -24,3 +24,7 @@ class InvalidCredentialsError(DomainError):
 
 class InvalidTokenError(DomainError):
     """Raised when an access token is missing, malformed, or expired."""
+
+
+class SessionNotFoundError(DomainError):
+    """Raised when a session does not exist for the authenticated user."""

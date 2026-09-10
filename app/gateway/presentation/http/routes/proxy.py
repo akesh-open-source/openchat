@@ -22,6 +22,7 @@ PUBLIC_AUTH_PATHS = frozenset(
         "initiate-register",
         "complete-register",
         "login",
+        "logout",
         "refresh",
         "forgot-password",
         "reset-password",

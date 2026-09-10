@@ -2,14 +2,17 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Response, status
 
+from app.auth.application.commands.revoke_session import RevokeSessionCommand
 from app.auth.application.services.list_devices_service import ListDevicesService
 from app.auth.application.services.list_sessions_service import ListSessionsService
+from app.auth.application.services.revoke_session_service import RevokeSessionService
 from app.auth.presentation.http.dependencies import (
     get_current_user_id,
     get_list_devices_service,
     get_list_sessions_service,
+    get_revoke_session_service,
 )
 from app.auth.presentation.http.schemas import DeviceResponse, SessionResponse
 
@@ -63,3 +66,19 @@ async def list_sessions(
         )
         for session in sessions
     ]
+
+
+@router.delete(
+    "/sessions/{session_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+)
+async def revoke_session(
+    session_id: UUID,
+    user_id: UUID = Depends(get_current_user_id),
+    service: RevokeSessionService = Depends(get_revoke_session_service),
+) -> Response:
+    await service.revoke_session(
+        RevokeSessionCommand(user_id=user_id, session_id=session_id)
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
