@@ -5,7 +5,11 @@ from uuid import UUID
 
 import jwt
 
-from app.auth.application.ports.token_issuer import RefreshTokenClaims, TokenPair
+from app.auth.application.ports.token_issuer import (
+    AccessTokenClaims,
+    RefreshTokenClaims,
+    TokenPair,
+)
 from app.auth.domain.exceptions import InvalidTokenError
 from app.auth.domain.ids import new_uuid7
 
@@ -36,7 +40,13 @@ class JwtTokenIssuer:
             minutes=password_reset_token_expire_minutes,
         )
 
-    def issue_tokens(self, user_id: UUID, email: str) -> TokenPair:
+    def issue_tokens(
+        self,
+        user_id: UUID,
+        email: str,
+        *,
+        session_id: UUID,
+    ) -> TokenPair:
         now = datetime.now(timezone.utc)
         subject = str(user_id)
         refresh_jti = new_uuid7()
@@ -48,6 +58,7 @@ class JwtTokenIssuer:
             token_type=_ACCESS_TYPE,
             expires_at=now + self._access_ttl,
             now=now,
+            session_id=session_id,
         )
         refresh_token = self._encode(
             subject=subject,
@@ -65,9 +76,17 @@ class JwtTokenIssuer:
             refresh_expires_at=refresh_expires_at,
         )
 
-    def verify_access_token(self, token: str) -> UUID:
+    def verify_access_token(self, token: str) -> AccessTokenClaims:
         payload = self._decode(token, expected_type=_ACCESS_TYPE)
-        return self._subject_uuid(payload, expected_type=_ACCESS_TYPE)
+        user_id = self._subject_uuid(payload, expected_type=_ACCESS_TYPE)
+        session_raw = payload.get("sid")
+        if not session_raw:
+            raise InvalidTokenError("Invalid or expired access token")
+        try:
+            session_id = UUID(str(session_raw))
+        except ValueError as exc:
+            raise InvalidTokenError("Invalid or expired access token") from exc
+        return AccessTokenClaims(user_id=user_id, session_id=session_id)
 
     def verify_refresh_token(self, token: str) -> RefreshTokenClaims:
         payload = self._decode(token, expected_type=_REFRESH_TYPE)
@@ -96,6 +115,10 @@ class JwtTokenIssuer:
         payload = self._decode(token, expected_type=_PASSWORD_RESET_TYPE)
         return self._subject_uuid(payload, expected_type=_PASSWORD_RESET_TYPE)
 
+    @property
+    def refresh_token_ttl(self) -> timedelta:
+        return self._refresh_ttl
+
     def _encode(
         self,
         *,
@@ -105,6 +128,7 @@ class JwtTokenIssuer:
         expires_at: datetime,
         now: datetime,
         jti: UUID | None = None,
+        session_id: UUID | None = None,
     ) -> str:
         payload: dict[str, object] = {
             "sub": subject,
@@ -115,6 +139,8 @@ class JwtTokenIssuer:
         }
         if jti is not None:
             payload["jti"] = str(jti)
+        if session_id is not None:
+            payload["sid"] = str(session_id)
         return jwt.encode(
             payload,
             self._private_key,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 
 from app.auth.application.commands.login_user import LoginUserCommand
 from app.auth.application.ports.password_hasher import PasswordHasher
@@ -27,6 +28,7 @@ class LoginService:
     refresh_token_repository: RefreshTokenRepository
     device_repository: DeviceRepository
     session_repository: SessionRepository
+    refresh_token_expire_days: int
 
     async def login(self, command: LoginUserCommand) -> TokenPair:
         email = Email(command.email)
@@ -59,14 +61,22 @@ class LoginService:
             )
         await self.device_repository.save(device)
 
-        tokens = self.token_issuer.issue_tokens(user.id, user.email.value)
-
+        # Session must exist before access JWT is issued (access embeds sid).
         session = Session.create(
             user_id=user.id,
             device_id=device.id,
-            expires_at=tokens.refresh_expires_at,
+            expires_at=datetime.now(timezone.utc)
+            + timedelta(days=self.refresh_token_expire_days),
             ip_address=command.ip_address,
         )
+        await self.session_repository.save(session)
+
+        tokens = self.token_issuer.issue_tokens(
+            user.id,
+            user.email.value,
+            session_id=session.id,
+        )
+        session.touch(expires_at=tokens.refresh_expires_at)
         await self.session_repository.save(session)
 
         await self.refresh_token_repository.save(
