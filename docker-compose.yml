@@ -4,6 +4,9 @@
 # Env files:
 #   app/auth/.env    — postgres-auth + auth (see app/auth/.env.example)
 #   app/gateway/.env — gateway (see app/gateway/.env.example)
+# JWT keys:
+#   secrets/jwt/private.pem — auth only (see secrets/jwt/README.md)
+#   secrets/jwt/public.pem  — auth + gateway
 #
 # Networks:
 #   auth-internal — postgres-auth ↔ auth-redis ↔ auth (DB/cache not on edge)
@@ -50,6 +53,10 @@ services:
       dockerfile: app/auth/Dockerfile
     env_file:
       - app/auth/.env
+    volumes:
+      # Private key only on auth (sign). Public for self-verify.
+      - ./secrets/jwt/private.pem:/run/secrets/jwt_private.pem:ro
+      - ./secrets/jwt/public.pem:/run/secrets/jwt_public.pem:ro
     ports:
       - "8001:8001"
     networks:
@@ -81,6 +88,9 @@ services:
       dockerfile: app/gateway/Dockerfile
     env_file:
       - app/gateway/.env
+    volumes:
+      # Public key only — gateway can verify, never mint tokens.
+      - ./secrets/jwt/public.pem:/run/secrets/jwt_public.pem:ro
     ports:
       - "8000:8000"
     networks:

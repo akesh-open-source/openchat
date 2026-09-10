@@ -158,6 +158,10 @@ ENV/
 env.bak/
 venv.bak/
 
+# JWT signing material — never commit the private key
+secrets/jwt/private.pem
+secrets/jwt/*.key
+
 # Spyder project settings
 .spyderproject
 .spyproject

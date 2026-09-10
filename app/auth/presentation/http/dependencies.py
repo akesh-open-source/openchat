@@ -31,11 +31,21 @@ from app.auth.infrastructure.persistence.redis.pending_registration_store import
 )
 from app.auth.infrastructure.security.jwt_token_issuer import JwtTokenIssuer
 from app.auth.infrastructure.security.password_hasher import Argon2PasswordHasher
+from app.auth.infrastructure.security.pem import load_pem
 from app.auth.security.authentication import extract_bearer_token
 
 _password_hasher = Argon2PasswordHasher()
 _token_issuer = JwtTokenIssuer(
-    secret=settings.jwt_secret,
+    private_key=load_pem(
+        inline=settings.jwt_private_key,
+        path=settings.jwt_private_key_path,
+        name="private key",
+    ),
+    public_key=load_pem(
+        inline=settings.jwt_public_key,
+        path=settings.jwt_public_key_path,
+        name="public key",
+    ),
     algorithm=settings.jwt_algorithm,
     access_token_expire_minutes=settings.access_token_expire_minutes,
     refresh_token_expire_days=settings.refresh_token_expire_days,

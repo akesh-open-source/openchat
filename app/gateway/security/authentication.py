@@ -7,6 +7,13 @@ from fastapi import Request
 
 from app.gateway.config.settings import settings
 from app.gateway.exceptions.errors import InvalidTokenError, UnauthenticatedError
+from app.gateway.security.pem import load_pem
+
+_public_key = load_pem(
+    inline=settings.jwt_public_key,
+    path=settings.jwt_public_key_path,
+    name="public key",
+)
 
 
 def extract_bearer_token(request: Request) -> str:
@@ -25,7 +32,7 @@ def verify_access_token(token: str) -> UUID:
     try:
         payload = jwt.decode(
             token,
-            settings.jwt_secret,
+            _public_key,
             algorithms=[settings.jwt_algorithm],
         )
     except jwt.PyJWTError as exc:

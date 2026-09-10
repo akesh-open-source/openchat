@@ -14,16 +14,20 @@ _PASSWORD_RESET_TYPE = "password_reset"
 
 
 class JwtTokenIssuer:
+    """Issues and verifies JWTs using asymmetric keys (sign=private, verify=public)."""
+
     def __init__(
         self,
         *,
-        secret: str,
+        private_key: str,
+        public_key: str,
         algorithm: str,
         access_token_expire_minutes: int,
         refresh_token_expire_days: int,
         password_reset_token_expire_minutes: int,
     ) -> None:
-        self._secret = secret
+        self._private_key = private_key
+        self._public_key = public_key
         self._algorithm = algorithm
         self._access_ttl = timedelta(minutes=access_token_expire_minutes)
         self._refresh_ttl = timedelta(days=refresh_token_expire_days)
@@ -88,7 +92,7 @@ class JwtTokenIssuer:
                 "iat": now,
                 "exp": expires_at,
             },
-            self._secret,
+            self._private_key,
             algorithm=self._algorithm,
         )
 
@@ -101,7 +105,7 @@ class JwtTokenIssuer:
         try:
             payload = jwt.decode(
                 token,
-                self._secret,
+                self._public_key,
                 algorithms=[self._algorithm],
             )
         except jwt.PyJWTError as exc:
