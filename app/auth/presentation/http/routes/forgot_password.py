@@ -6,6 +6,7 @@ from app.auth.application.commands.forgot_password import ForgotPasswordCommand
 from app.auth.application.services.forgot_password_service import ForgotPasswordService
 from app.auth.config.settings import settings
 from app.auth.presentation.http.dependencies import get_forgot_password_service
+from app.auth.presentation.http.rate_limit import limit_password_reset
 from app.auth.presentation.http.schemas import (
     ForgotPasswordRequest,
     ForgotPasswordResponse,
@@ -21,6 +22,7 @@ router = APIRouter(
     "/forgot-password",
     response_model=ForgotPasswordResponse,
     status_code=status.HTTP_200_OK,
+    dependencies=[limit_password_reset()],
 )
 async def forgot_password(
     request: ForgotPasswordRequest,

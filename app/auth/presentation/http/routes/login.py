@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Request, status
 from app.auth.application.commands.login_user import LoginUserCommand
 from app.auth.application.services.login_service import LoginService
 from app.auth.presentation.http.dependencies import get_login_service
+from app.auth.presentation.http.rate_limit import limit_login
 from app.auth.presentation.http.schemas import LoginUserRequest, LoginUserResponse
 
 router = APIRouter(
@@ -17,6 +18,7 @@ router = APIRouter(
     "/login",
     response_model=LoginUserResponse,
     status_code=status.HTTP_200_OK,
+    dependencies=[limit_login()],
 )
 async def login(
     request: LoginUserRequest,

@@ -14,6 +14,7 @@ from app.auth.presentation.http.dependencies import (
     get_list_sessions_service,
     get_revoke_session_service,
 )
+from app.auth.presentation.http.rate_limit import limit_default
 from app.auth.presentation.http.schemas import DeviceResponse, SessionResponse
 
 router = APIRouter(
@@ -26,6 +27,7 @@ router = APIRouter(
     "/devices",
     response_model=list[DeviceResponse],
     status_code=status.HTTP_200_OK,
+    dependencies=[limit_default()],
 )
 async def list_devices(
     user_id: UUID = Depends(get_current_user_id),
@@ -49,6 +51,7 @@ async def list_devices(
     "/sessions",
     response_model=list[SessionResponse],
     status_code=status.HTTP_200_OK,
+    dependencies=[limit_default()],
 )
 async def list_sessions(
     user_id: UUID = Depends(get_current_user_id),
@@ -72,6 +75,7 @@ async def list_sessions(
     "/sessions/{session_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     response_class=Response,
+    dependencies=[limit_default()],
 )
 async def revoke_session(
     session_id: UUID,

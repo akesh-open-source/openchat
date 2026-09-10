@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app.auth.domain.exceptions import DomainError, InvalidTokenError
+from app.auth.domain.exceptions import DomainError, InvalidTokenError, RateLimitExceededError
 from app.auth.exceptions.mapping import EXCEPTION_STATUS_MAP
 
 
@@ -20,6 +20,8 @@ def register_exception_handlers(app: FastAPI) -> None:
         headers: dict[str, str] = {}
         if isinstance(exc, InvalidTokenError):
             headers["WWW-Authenticate"] = "Bearer"
+        if isinstance(exc, RateLimitExceededError):
+            headers["Retry-After"] = str(exc.retry_after)
 
         return JSONResponse(
             status_code=status_code,

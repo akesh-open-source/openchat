@@ -11,6 +11,7 @@ from app.auth.presentation.http.dependencies import (
     get_complete_register_service,
     get_initiate_register_service,
 )
+from app.auth.presentation.http.rate_limit import limit_register
 from app.auth.presentation.http.schemas import (
     CompleteRegisterRequest,
     CompleteRegisterResponse,
@@ -28,6 +29,7 @@ router = APIRouter(
     "/initiate-register",
     response_model=InitiateRegisterResponse,
     status_code=status.HTTP_200_OK,
+    dependencies=[limit_register()],
 )
 async def initiate_register(
     request: InitiateRegisterRequest,
@@ -50,6 +52,7 @@ async def initiate_register(
     "/complete-register",
     response_model=CompleteRegisterResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[limit_register()],
 )
 async def complete_register(
     request: CompleteRegisterRequest,
