@@ -5,8 +5,9 @@ from uuid import UUID
 
 import jwt
 
-from app.auth.application.ports.token_issuer import TokenPair
+from app.auth.application.ports.token_issuer import RefreshTokenClaims, TokenPair
 from app.auth.domain.exceptions import InvalidTokenError
+from app.auth.domain.ids import new_uuid7
 
 _ACCESS_TYPE = "access"
 _REFRESH_TYPE = "refresh"
@@ -38,6 +39,8 @@ class JwtTokenIssuer:
     def issue_tokens(self, user_id: UUID, email: str) -> TokenPair:
         now = datetime.now(timezone.utc)
         subject = str(user_id)
+        refresh_jti = new_uuid7()
+        refresh_expires_at = now + self._refresh_ttl
 
         access_token = self._encode(
             subject=subject,
@@ -50,17 +53,34 @@ class JwtTokenIssuer:
             subject=subject,
             email=email,
             token_type=_REFRESH_TYPE,
-            expires_at=now + self._refresh_ttl,
+            expires_at=refresh_expires_at,
             now=now,
+            jti=refresh_jti,
         )
 
         return TokenPair(
             access_token=access_token,
             refresh_token=refresh_token,
+            refresh_jti=refresh_jti,
+            refresh_expires_at=refresh_expires_at,
         )
 
     def verify_access_token(self, token: str) -> UUID:
-        return self._verify(token, expected_type=_ACCESS_TYPE)
+        payload = self._decode(token, expected_type=_ACCESS_TYPE)
+        return self._subject_uuid(payload, expected_type=_ACCESS_TYPE)
+
+    def verify_refresh_token(self, token: str) -> RefreshTokenClaims:
+        payload = self._decode(token, expected_type=_REFRESH_TYPE)
+        user_id = self._subject_uuid(payload, expected_type=_REFRESH_TYPE)
+        email = payload.get("email")
+        jti_raw = payload.get("jti")
+        if not email or not jti_raw:
+            raise InvalidTokenError("Invalid or expired refresh token")
+        try:
+            jti = UUID(str(jti_raw))
+        except ValueError as exc:
+            raise InvalidTokenError("Invalid or expired refresh token") from exc
+        return RefreshTokenClaims(user_id=user_id, email=str(email), jti=jti)
 
     def issue_password_reset_token(self, user_id: UUID, email: str) -> str:
         now = datetime.now(timezone.utc)
@@ -73,7 +93,8 @@ class JwtTokenIssuer:
         )
 
     def verify_password_reset_token(self, token: str) -> UUID:
-        return self._verify(token, expected_type=_PASSWORD_RESET_TYPE)
+        payload = self._decode(token, expected_type=_PASSWORD_RESET_TYPE)
+        return self._subject_uuid(payload, expected_type=_PASSWORD_RESET_TYPE)
 
     def _encode(
         self,
@@ -83,25 +104,25 @@ class JwtTokenIssuer:
         token_type: str,
         expires_at: datetime,
         now: datetime,
+        jti: UUID | None = None,
     ) -> str:
+        payload: dict[str, object] = {
+            "sub": subject,
+            "email": email,
+            "type": token_type,
+            "iat": now,
+            "exp": expires_at,
+        }
+        if jti is not None:
+            payload["jti"] = str(jti)
         return jwt.encode(
-            {
-                "sub": subject,
-                "email": email,
-                "type": token_type,
-                "iat": now,
-                "exp": expires_at,
-            },
+            payload,
             self._private_key,
             algorithm=self._algorithm,
         )
 
-    def _verify(self, token: str, *, expected_type: str) -> UUID:
-        error_message = (
-            "Invalid or expired reset token"
-            if expected_type == _PASSWORD_RESET_TYPE
-            else "Invalid or expired access token"
-        )
+    def _decode(self, token: str, *, expected_type: str) -> dict:
+        error_message = self._error_message(expected_type)
         try:
             payload = jwt.decode(
                 token,
@@ -113,12 +134,22 @@ class JwtTokenIssuer:
 
         if payload.get("type") != expected_type:
             raise InvalidTokenError(error_message)
+        return payload
 
+    def _subject_uuid(self, payload: dict, *, expected_type: str) -> UUID:
+        error_message = self._error_message(expected_type)
         subject = payload.get("sub")
         if not subject:
             raise InvalidTokenError(error_message)
-
         try:
-            return UUID(subject)
+            return UUID(str(subject))
         except ValueError as exc:
             raise InvalidTokenError(error_message) from exc
+
+    @staticmethod
+    def _error_message(expected_type: str) -> str:
+        if expected_type == _PASSWORD_RESET_TYPE:
+            return "Invalid or expired reset token"
+        if expected_type == _REFRESH_TYPE:
+            return "Invalid or expired refresh token"
+        return "Invalid or expired access token"
