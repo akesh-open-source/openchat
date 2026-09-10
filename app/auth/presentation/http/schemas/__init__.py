@@ -9,6 +9,7 @@ from app.auth.presentation.http.schemas.login import (
     LoginUserResponse,
     SessionResponse,
 )
+from app.auth.presentation.http.schemas.logout import LogoutRequest
 from app.auth.presentation.http.schemas.refresh import (
     RefreshTokensRequest,
     RefreshTokensResponse,
@@ -32,6 +33,7 @@ __all__ = [
     "InitiateRegisterResponse",
     "LoginUserRequest",
     "LoginUserResponse",
+    "LogoutRequest",
     "RefreshTokensRequest",
     "RefreshTokensResponse",
     "ResetPasswordRequest",

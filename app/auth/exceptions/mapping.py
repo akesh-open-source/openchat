@@ -7,6 +7,7 @@ from app.auth.domain.exceptions import (
     InvalidEmailError,
     InvalidPasswordError,
     InvalidTokenError,
+    SessionNotFoundError,
     UserAlreadyExistsError,
 )
 
@@ -17,5 +18,6 @@ EXCEPTION_STATUS_MAP: dict[type[Exception], int] = {
     UserAlreadyExistsError: status.HTTP_409_CONFLICT,
     InvalidCredentialsError: status.HTTP_401_UNAUTHORIZED,
     InvalidTokenError: status.HTTP_401_UNAUTHORIZED,
+    SessionNotFoundError: status.HTTP_404_NOT_FOUND,
     DomainError: status.HTTP_400_BAD_REQUEST,
 }
