@@ -29,6 +29,11 @@ def extract_bearer_token(request: Request) -> str:
 
 
 def verify_access_token(token: str) -> UUID:
+    """Crypto-verify access JWT and require sid claim.
+
+    Session revocation is enforced by auth (and later services) using sid;
+    the gateway does not own the sessions DB.
+    """
     try:
         payload = jwt.decode(
             token,
@@ -41,11 +46,15 @@ def verify_access_token(token: str) -> UUID:
     if payload.get("type") != "access":
         raise InvalidTokenError("Invalid or expired access token")
 
+    if not payload.get("sid"):
+        raise InvalidTokenError("Invalid or expired access token")
+
     subject = payload.get("sub")
     if not subject:
         raise InvalidTokenError("Invalid or expired access token")
 
     try:
-        return UUID(subject)
+        UUID(str(payload["sid"]))
+        return UUID(str(subject))
     except ValueError as exc:
         raise InvalidTokenError("Invalid or expired access token") from exc

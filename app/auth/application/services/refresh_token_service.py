@@ -59,7 +59,11 @@ class RefreshTokenService:
         if user is None or not user.is_active:
             raise InvalidTokenError("Invalid or expired refresh token")
 
-        tokens = self.token_issuer.issue_tokens(user.id, user.email.value)
+        tokens = self.token_issuer.issue_tokens(
+            user.id,
+            user.email.value,
+            session_id=session.id,
+        )
         replacement = RefreshToken.create(
             token_id=tokens.refresh_jti,
             user_id=user.id,

@@ -10,12 +10,14 @@ from app.auth.application.ports.pending_registration_store import (
     PendingRegistrationStore,
 )
 from app.auth.application.ports.token_issuer import (
+    AccessTokenClaims,
     RefreshTokenClaims,
     TokenIssuer,
     TokenPair,
 )
 
 __all__ = [
+    "AccessTokenClaims",
     "EmailSender",
     "EmailTemplateRenderer",
     "EventPublisher",

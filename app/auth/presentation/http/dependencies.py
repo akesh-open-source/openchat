@@ -48,6 +48,7 @@ from app.auth.infrastructure.persistence.redis.client import get_redis
 from app.auth.infrastructure.persistence.redis.pending_registration_store import (
     RedisPendingRegistrationStore,
 )
+from app.auth.domain.exceptions import InvalidTokenError
 from app.auth.infrastructure.security.jwt_token_issuer import JwtTokenIssuer
 from app.auth.infrastructure.security.password_hasher import Argon2PasswordHasher
 from app.auth.infrastructure.security.pem import load_pem
@@ -91,15 +92,6 @@ def get_token_issuer() -> TokenIssuer:
     return _token_issuer
 
 
-def get_current_user_id(
-    request: Request,
-    token_issuer: Annotated[TokenIssuer, Depends(get_token_issuer)],
-) -> UUID:
-    """Require a valid Bearer access token; return the subject user id."""
-    token = extract_bearer_token(request)
-    return token_issuer.verify_access_token(token)
-
-
 def get_email_sender() -> EmailSender:
     return _email_sender
 
@@ -130,6 +122,24 @@ def get_session_repository(
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> SessionRepository:
     return PostgresSessionRepository(session)
+
+
+async def get_current_user_id(
+    request: Request,
+    token_issuer: Annotated[TokenIssuer, Depends(get_token_issuer)],
+    session_repository: Annotated[SessionRepository, Depends(get_session_repository)],
+) -> UUID:
+    """Require a valid Bearer access token bound to an active session."""
+    token = extract_bearer_token(request)
+    claims = token_issuer.verify_access_token(token)
+    session = await session_repository.get_by_id(claims.session_id)
+    if (
+        session is None
+        or not session.is_active
+        or session.user_id != claims.user_id
+    ):
+        raise InvalidTokenError("Invalid or expired access token")
+    return claims.user_id
 
 
 def get_pending_registration_store() -> PendingRegistrationStore:
@@ -201,6 +211,7 @@ def get_login_service(
         refresh_token_repository=refresh_token_repository,
         device_repository=device_repository,
         session_repository=session_repository,
+        refresh_token_expire_days=settings.refresh_token_expire_days,
     )
 
 
