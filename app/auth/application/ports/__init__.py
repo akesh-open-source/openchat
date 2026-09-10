@@ -9,7 +9,11 @@ from app.auth.application.ports.pending_registration_store import (
     PendingRegistration,
     PendingRegistrationStore,
 )
-from app.auth.application.ports.token_issuer import TokenIssuer, TokenPair
+from app.auth.application.ports.token_issuer import (
+    RefreshTokenClaims,
+    TokenIssuer,
+    TokenPair,
+)
 
 __all__ = [
     "EmailSender",
@@ -18,6 +22,7 @@ __all__ = [
     "PasswordHasher",
     "PendingRegistration",
     "PendingRegistrationStore",
+    "RefreshTokenClaims",
     "RenderedEmail",
     "TokenIssuer",
     "TokenPair",
