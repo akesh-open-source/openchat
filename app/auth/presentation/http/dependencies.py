@@ -10,24 +10,34 @@ from app.auth.application.ports.email_sender import EmailSender
 from app.auth.application.ports.email_template_renderer import EmailTemplateRenderer
 from app.auth.application.ports.password_hasher import PasswordHasher
 from app.auth.application.ports.pending_registration_store import PendingRegistrationStore
+from app.auth.application.ports.repositories.device_repository import DeviceRepository
 from app.auth.application.ports.repositories.refresh_token_repository import (
     RefreshTokenRepository,
 )
+from app.auth.application.ports.repositories.session_repository import SessionRepository
 from app.auth.application.ports.repositories.user_repository import UserRepository
 from app.auth.application.ports.token_issuer import TokenIssuer
 from app.auth.application.services.change_password_service import ChangePasswordService
 from app.auth.application.services.complete_register_service import CompleteRegisterService
 from app.auth.application.services.forgot_password_service import ForgotPasswordService
 from app.auth.application.services.initiate_register_service import InitiateRegisterService
+from app.auth.application.services.list_devices_service import ListDevicesService
+from app.auth.application.services.list_sessions_service import ListSessionsService
 from app.auth.application.services.login_service import LoginService
 from app.auth.application.services.refresh_token_service import RefreshTokenService
 from app.auth.application.services.reset_password_service import ResetPasswordService
 from app.auth.config.settings import settings
 from app.auth.infrastructure.email.smtp_email_sender import SmtpEmailSender
 from app.auth.infrastructure.email.template_renderer import JinjaEmailTemplateRenderer
-from app.auth.infrastructure.persistence.postgres.session import get_session
+from app.auth.infrastructure.persistence.postgres.device_repository import (
+    PostgresDeviceRepository,
+)
 from app.auth.infrastructure.persistence.postgres.refresh_token_repository import (
     PostgresRefreshTokenRepository,
+)
+from app.auth.infrastructure.persistence.postgres.session import get_session
+from app.auth.infrastructure.persistence.postgres.session_repository import (
+    PostgresSessionRepository,
 )
 from app.auth.infrastructure.persistence.postgres.user_repository import (
     PostgresUserRepository,
@@ -108,6 +118,18 @@ def get_refresh_token_repository(
     return PostgresRefreshTokenRepository(session)
 
 
+def get_device_repository(
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> DeviceRepository:
+    return PostgresDeviceRepository(session)
+
+
+def get_session_repository(
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> SessionRepository:
+    return PostgresSessionRepository(session)
+
+
 def get_pending_registration_store() -> PendingRegistrationStore:
     return RedisPendingRegistrationStore(get_redis())
 
@@ -167,12 +189,16 @@ def get_login_service(
         RefreshTokenRepository,
         Depends(get_refresh_token_repository),
     ],
+    device_repository: Annotated[DeviceRepository, Depends(get_device_repository)],
+    session_repository: Annotated[SessionRepository, Depends(get_session_repository)],
 ) -> LoginService:
     return LoginService(
         user_repository=user_repository,
         password_hasher=password_hasher,
         token_issuer=token_issuer,
         refresh_token_repository=refresh_token_repository,
+        device_repository=device_repository,
+        session_repository=session_repository,
     )
 
 
@@ -183,12 +209,28 @@ def get_refresh_token_service(
         Depends(get_refresh_token_repository),
     ],
     token_issuer: Annotated[TokenIssuer, Depends(get_token_issuer)],
+    session_repository: Annotated[SessionRepository, Depends(get_session_repository)],
+    device_repository: Annotated[DeviceRepository, Depends(get_device_repository)],
 ) -> RefreshTokenService:
     return RefreshTokenService(
         user_repository=user_repository,
         refresh_token_repository=refresh_token_repository,
         token_issuer=token_issuer,
+        session_repository=session_repository,
+        device_repository=device_repository,
     )
+
+
+def get_list_devices_service(
+    device_repository: Annotated[DeviceRepository, Depends(get_device_repository)],
+) -> ListDevicesService:
+    return ListDevicesService(device_repository=device_repository)
+
+
+def get_list_sessions_service(
+    session_repository: Annotated[SessionRepository, Depends(get_session_repository)],
+) -> ListSessionsService:
+    return ListSessionsService(session_repository=session_repository)
 
 
 def get_forgot_password_service(
@@ -219,12 +261,14 @@ def get_reset_password_service(
         RefreshTokenRepository,
         Depends(get_refresh_token_repository),
     ],
+    session_repository: Annotated[SessionRepository, Depends(get_session_repository)],
 ) -> ResetPasswordService:
     return ResetPasswordService(
         user_repository=user_repository,
         password_hasher=password_hasher,
         token_issuer=token_issuer,
         refresh_token_repository=refresh_token_repository,
+        session_repository=session_repository,
     )
 
 
@@ -235,9 +279,11 @@ def get_change_password_service(
         RefreshTokenRepository,
         Depends(get_refresh_token_repository),
     ],
+    session_repository: Annotated[SessionRepository, Depends(get_session_repository)],
 ) -> ChangePasswordService:
     return ChangePasswordService(
         user_repository=user_repository,
         password_hasher=password_hasher,
         refresh_token_repository=refresh_token_repository,
+        session_repository=session_repository,
     )

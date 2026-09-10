@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from uuid import UUID
 
 from app.auth.application.commands.change_password import ChangePasswordCommand
 from app.auth.application.ports.password_hasher import PasswordHasher
 from app.auth.application.ports.repositories.refresh_token_repository import (
     RefreshTokenRepository,
 )
+from app.auth.application.ports.repositories.session_repository import SessionRepository
 from app.auth.application.ports.repositories.user_repository import UserRepository
 from app.auth.domain.exceptions import (
     InvalidCredentialsError,
@@ -22,6 +24,7 @@ class ChangePasswordService:
     user_repository: UserRepository
     password_hasher: PasswordHasher
     refresh_token_repository: RefreshTokenRepository
+    session_repository: SessionRepository
 
     async def change_password(self, command: ChangePasswordCommand) -> None:
         user = await self.user_repository.get_by_id(command.user_id)
@@ -46,7 +49,7 @@ class ChangePasswordService:
         hashed = self.password_hasher.hash(command.new_password)
         user.update_password(Password(hashed))
         await self.user_repository.save(user)
-        await self.refresh_token_repository.revoke_all_for_user(
-            user.id,
-            at=datetime.now(timezone.utc),
-        )
+
+        now = datetime.now(timezone.utc)
+        await self.refresh_token_repository.revoke_all_for_user(user.id, at=now)
+        await self.session_repository.revoke_all_for_user(user.id, at=now)

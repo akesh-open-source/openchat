@@ -20,7 +20,9 @@ if str(PROJECT_ROOT) not in sys.path:
 from app.auth.config.settings import settings  # noqa: E402
 from app.auth.infrastructure.persistence.postgres.base import Base  # noqa: E402
 from app.auth.infrastructure.persistence.postgres.models import (  # noqa: E402, F401
+    DeviceModel,
     RefreshTokenModel,
+    SessionModel,
     UserModel,
 )
 

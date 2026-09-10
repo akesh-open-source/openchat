@@ -14,6 +14,7 @@ def to_domain(model: RefreshTokenModel) -> RefreshToken:
         family_id=model.family_id,
         expires_at=model.expires_at,
         created_at=model.created_at,
+        session_id=model.session_id,
         revoked_at=model.revoked_at,
         replaced_by_id=model.replaced_by_id,
     )
@@ -23,6 +24,7 @@ def to_model(token: RefreshToken) -> RefreshTokenModel:
     return RefreshTokenModel(
         id=token.id,
         user_id=token.user_id,
+        session_id=token.session_id,
         token_hash=token.token_hash,
         family_id=token.family_id,
         expires_at=token.expires_at,
@@ -34,6 +36,7 @@ def to_model(token: RefreshToken) -> RefreshTokenModel:
 
 def apply_domain(model: RefreshTokenModel, token: RefreshToken) -> None:
     model.user_id = token.user_id
+    model.session_id = token.session_id
     model.token_hash = token.token_hash
     model.family_id = token.family_id
     model.expires_at = token.expires_at
