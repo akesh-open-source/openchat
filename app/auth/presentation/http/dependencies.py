@@ -55,22 +55,7 @@ from app.auth.infrastructure.security.pem import load_pem
 from app.auth.security.authentication import extract_bearer_token
 
 _password_hasher = Argon2PasswordHasher()
-_token_issuer = JwtTokenIssuer(
-    private_key=load_pem(
-        inline=settings.jwt_private_key,
-        path=settings.jwt_private_key_path,
-        name="private key",
-    ),
-    public_key=load_pem(
-        inline=settings.jwt_public_key,
-        path=settings.jwt_public_key_path,
-        name="public key",
-    ),
-    algorithm=settings.jwt_algorithm,
-    access_token_expire_minutes=settings.access_token_expire_minutes,
-    refresh_token_expire_days=settings.refresh_token_expire_days,
-    password_reset_token_expire_minutes=settings.password_reset_token_expire_minutes,
-)
+_token_issuer: JwtTokenIssuer | None = None
 _email_sender = SmtpEmailSender(
     host=settings.smtp_host,
     port=settings.smtp_port,
@@ -89,6 +74,26 @@ def get_password_hasher() -> PasswordHasher:
 
 
 def get_token_issuer() -> TokenIssuer:
+    global _token_issuer
+    if _token_issuer is None:
+        _token_issuer = JwtTokenIssuer(
+            private_key=load_pem(
+                inline=settings.jwt_private_key,
+                path=settings.jwt_private_key_path,
+                name="private key",
+            ),
+            public_key=load_pem(
+                inline=settings.jwt_public_key,
+                path=settings.jwt_public_key_path,
+                name="public key",
+            ),
+            algorithm=settings.jwt_algorithm,
+            access_token_expire_minutes=settings.access_token_expire_minutes,
+            refresh_token_expire_days=settings.refresh_token_expire_days,
+            password_reset_token_expire_minutes=(
+                settings.password_reset_token_expire_minutes
+            ),
+        )
     return _token_issuer
 
 

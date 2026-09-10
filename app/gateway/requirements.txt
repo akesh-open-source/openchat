@@ -3,3 +3,4 @@ uvicorn[standard]>=0.52.0
 pydantic-settings>=2.15.0
 httpx>=0.28.0
 PyJWT[crypto]>=2.10.0
+pytest>=8.0.0

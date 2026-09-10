@@ -9,11 +9,18 @@ from app.gateway.config.settings import settings
 from app.gateway.exceptions.errors import InvalidTokenError, UnauthenticatedError
 from app.gateway.security.pem import load_pem
 
-_public_key = load_pem(
-    inline=settings.jwt_public_key,
-    path=settings.jwt_public_key_path,
-    name="public key",
-)
+_public_key: str | None = None
+
+
+def _get_public_key() -> str:
+    global _public_key
+    if _public_key is None:
+        _public_key = load_pem(
+            inline=settings.jwt_public_key,
+            path=settings.jwt_public_key_path,
+            name="public key",
+        )
+    return _public_key
 
 
 def extract_bearer_token(request: Request) -> str:
@@ -37,7 +44,7 @@ def verify_access_token(token: str) -> UUID:
     try:
         payload = jwt.decode(
             token,
-            _public_key,
+            _get_public_key(),
             algorithms=[settings.jwt_algorithm],
         )
     except jwt.PyJWTError as exc:
