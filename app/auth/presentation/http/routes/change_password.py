@@ -10,6 +10,7 @@ from app.auth.presentation.http.dependencies import (
     get_change_password_service,
     get_current_user_id,
 )
+from app.auth.presentation.http.rate_limit import limit_default
 from app.auth.presentation.http.schemas import ChangePasswordRequest
 
 router = APIRouter(
@@ -22,6 +23,7 @@ router = APIRouter(
     "/change-password",
     status_code=status.HTTP_204_NO_CONTENT,
     response_class=Response,
+    dependencies=[limit_default()],
 )
 async def change_password(
     request: ChangePasswordRequest,

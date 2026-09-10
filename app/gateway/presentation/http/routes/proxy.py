@@ -12,6 +12,7 @@ from app.gateway.presentation.http.dependencies import (
     get_current_user_id,
     get_upstream_client,
 )
+from app.gateway.security.rate_limit import enforce_auth_rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +62,8 @@ async def proxy_auth(
     request: Request,
     client: Annotated[AsyncClient, Depends(get_upstream_client)],
 ) -> Response:
+    enforce_auth_rate_limit(request, path)
+
     # Edge JWT gate for protected auth routes (defense in depth; auth re-verifies).
     if path.split("/", 1)[0] not in PUBLIC_AUTH_PATHS:
         get_current_user_id(request)

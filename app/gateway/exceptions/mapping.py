@@ -3,6 +3,7 @@ from fastapi import status
 from app.gateway.exceptions.errors import (
     GatewayError,
     InvalidTokenError,
+    RateLimitExceededError,
     UnauthenticatedError,
     UpstreamUnavailableError,
 )
@@ -13,5 +14,6 @@ EXCEPTION_STATUS_MAP: dict[type[Exception], int] = {
     UpstreamUnavailableError: status.HTTP_502_BAD_GATEWAY,
     UnauthenticatedError: status.HTTP_401_UNAUTHORIZED,
     InvalidTokenError: status.HTTP_401_UNAUTHORIZED,
+    RateLimitExceededError: status.HTTP_429_TOO_MANY_REQUESTS,
     GatewayError: status.HTTP_500_INTERNAL_SERVER_ERROR,
 }

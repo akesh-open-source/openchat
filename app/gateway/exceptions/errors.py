@@ -17,3 +17,16 @@ class UnauthenticatedError(GatewayError):
 
 class InvalidTokenError(GatewayError):
     """Raised when a Bearer access token is invalid or expired."""
+
+
+class RateLimitExceededError(GatewayError):
+    """Raised when a client exceeds an edge rate limit."""
+
+    def __init__(
+        self,
+        message: str = "Rate limit exceeded. Try again later.",
+        *,
+        retry_after: int = 60,
+    ) -> None:
+        super().__init__(message)
+        self.retry_after = retry_after

@@ -30,5 +30,10 @@ class Settings(BaseSettings):
     # Outbound HTTP client.
     http_timeout_seconds: float = 30.0
 
+    # Edge rate limits for /auth/* (per client IP, fixed window).
+    rate_limit_window_seconds: int = 60
+    rate_limit_auth_strict_per_window: int = 20
+    rate_limit_auth_default_per_window: int = 60
+
 
 settings = Settings()

@@ -28,3 +28,16 @@ class InvalidTokenError(DomainError):
 
 class SessionNotFoundError(DomainError):
     """Raised when a session does not exist for the authenticated user."""
+
+
+class RateLimitExceededError(DomainError):
+    """Raised when a client exceeds an endpoint rate limit."""
+
+    def __init__(
+        self,
+        message: str = "Rate limit exceeded. Try again later.",
+        *,
+        retry_after: int = 60,
+    ) -> None:
+        super().__init__(message)
+        self.retry_after = retry_after

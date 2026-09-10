@@ -56,5 +56,13 @@ class Settings(BaseSettings):
     registration_verify_url_base: str = "http://localhost:8000/docs"
     login_url: str = "http://localhost:8000/docs"
 
+    # Rate limits (fixed window per client IP).
+    rate_limit_window_seconds: int = 60
+    rate_limit_login_per_window: int = 10
+    rate_limit_register_per_window: int = 5
+    rate_limit_password_reset_per_window: int = 5
+    rate_limit_refresh_per_window: int = 30
+    rate_limit_default_per_window: int = 60
+
 
 settings = Settings()

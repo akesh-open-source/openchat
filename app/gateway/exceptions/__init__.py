@@ -1,6 +1,7 @@
 from app.gateway.exceptions.errors import (
     GatewayError,
     InvalidTokenError,
+    RateLimitExceededError,
     UnauthenticatedError,
     UpstreamUnavailableError,
 )
@@ -10,6 +11,7 @@ __all__ = [
     "EXCEPTION_STATUS_MAP",
     "GatewayError",
     "InvalidTokenError",
+    "RateLimitExceededError",
     "UnauthenticatedError",
     "UpstreamUnavailableError",
 ]

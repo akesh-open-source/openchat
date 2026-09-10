@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, status
 from app.auth.application.commands.refresh_tokens import RefreshTokensCommand
 from app.auth.application.services.refresh_token_service import RefreshTokenService
 from app.auth.presentation.http.dependencies import get_refresh_token_service
+from app.auth.presentation.http.rate_limit import limit_refresh
 from app.auth.presentation.http.schemas import RefreshTokensRequest, RefreshTokensResponse
 
 router = APIRouter(
@@ -17,6 +18,7 @@ router = APIRouter(
     "/refresh",
     response_model=RefreshTokensResponse,
     status_code=status.HTTP_200_OK,
+    dependencies=[limit_refresh()],
 )
 async def refresh_tokens(
     request: RefreshTokensRequest,
