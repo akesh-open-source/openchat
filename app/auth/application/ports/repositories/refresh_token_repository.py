@@ -24,3 +24,12 @@ class RefreshTokenRepository(Protocol):
     async def revoke_all_for_user(self, user_id: UUID, *, at: datetime) -> None:
         """Revoke every active refresh token for a user (e.g. password change)."""
         ...
+
+    async def revoke_all_for_session(
+        self,
+        session_id: UUID,
+        *,
+        at: datetime,
+    ) -> None:
+        """Revoke every active refresh token bound to a session."""
+        ...

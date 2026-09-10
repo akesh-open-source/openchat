@@ -9,7 +9,7 @@ from app.auth.domain.ids import new_uuid7
 
 @dataclass(slots=True)
 class RefreshToken:
-    """Persisted refresh-token session (JWT jti maps to id)."""
+    """Persisted refresh token (JWT jti maps to id), bound to a session."""
 
     id: UUID
     user_id: UUID
@@ -17,6 +17,7 @@ class RefreshToken:
     family_id: UUID
     expires_at: datetime
     created_at: datetime
+    session_id: UUID | None = None
     revoked_at: datetime | None = None
     replaced_by_id: UUID | None = None
 
@@ -29,6 +30,7 @@ class RefreshToken:
         token_hash: str,
         family_id: UUID,
         expires_at: datetime,
+        session_id: UUID | None = None,
     ) -> RefreshToken:
         return cls(
             id=token_id,
@@ -37,6 +39,7 @@ class RefreshToken:
             family_id=family_id,
             expires_at=expires_at,
             created_at=datetime.now(timezone.utc),
+            session_id=session_id,
         )
 
     @property

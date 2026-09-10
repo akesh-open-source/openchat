@@ -58,3 +58,20 @@ class PostgresRefreshTokenRepository:
         )
         await self._session.execute(stmt)
         await self._session.flush()
+
+    async def revoke_all_for_session(
+        self,
+        session_id: UUID,
+        *,
+        at: datetime,
+    ) -> None:
+        stmt = (
+            update(RefreshTokenModel)
+            .where(
+                RefreshTokenModel.session_id == session_id,
+                RefreshTokenModel.revoked_at.is_(None),
+            )
+            .values(revoked_at=at)
+        )
+        await self._session.execute(stmt)
+        await self._session.flush()

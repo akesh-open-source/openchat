@@ -4,8 +4,10 @@ from app.auth.presentation.http.schemas.forgot_password import (
     ForgotPasswordResponse,
 )
 from app.auth.presentation.http.schemas.login import (
+    DeviceResponse,
     LoginUserRequest,
     LoginUserResponse,
+    SessionResponse,
 )
 from app.auth.presentation.http.schemas.refresh import (
     RefreshTokensRequest,
@@ -23,6 +25,7 @@ __all__ = [
     "ChangePasswordRequest",
     "CompleteRegisterRequest",
     "CompleteRegisterResponse",
+    "DeviceResponse",
     "ForgotPasswordRequest",
     "ForgotPasswordResponse",
     "InitiateRegisterRequest",
@@ -32,4 +35,5 @@ __all__ = [
     "RefreshTokensRequest",
     "RefreshTokensResponse",
     "ResetPasswordRequest",
+    "SessionResponse",
 ]

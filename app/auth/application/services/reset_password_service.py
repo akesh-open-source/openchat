@@ -8,6 +8,7 @@ from app.auth.application.ports.password_hasher import PasswordHasher
 from app.auth.application.ports.repositories.refresh_token_repository import (
     RefreshTokenRepository,
 )
+from app.auth.application.ports.repositories.session_repository import SessionRepository
 from app.auth.application.ports.repositories.user_repository import UserRepository
 from app.auth.application.ports.token_issuer import TokenIssuer
 from app.auth.domain.exceptions import InvalidTokenError
@@ -20,6 +21,7 @@ class ResetPasswordService:
     password_hasher: PasswordHasher
     token_issuer: TokenIssuer
     refresh_token_repository: RefreshTokenRepository
+    session_repository: SessionRepository
 
     async def reset_password(self, command: ResetPasswordCommand) -> None:
         user_id = self.token_issuer.verify_password_reset_token(command.token)
@@ -32,7 +34,7 @@ class ResetPasswordService:
         hashed = self.password_hasher.hash(command.new_password)
         user.update_password(Password(hashed))
         await self.user_repository.save(user)
-        await self.refresh_token_repository.revoke_all_for_user(
-            user.id,
-            at=datetime.now(timezone.utc),
-        )
+
+        now = datetime.now(timezone.utc)
+        await self.refresh_token_repository.revoke_all_for_user(user.id, at=now)
+        await self.session_repository.revoke_all_for_user(user.id, at=now)
