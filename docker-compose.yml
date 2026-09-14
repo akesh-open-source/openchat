@@ -107,6 +107,9 @@ services:
       dockerfile: app/users/Dockerfile
     env_file:
       - app/users/.env
+    volumes:
+      # Public key only — users verifies access JWTs (gateway also verifies).
+      - ./secrets/jwt/public.pem:/run/secrets/jwt_public.pem:ro
     ports:
       - "8002:8002"
     networks:
