@@ -17,6 +17,7 @@ from app.auth.application.ports.repositories.refresh_token_repository import (
 from app.auth.application.ports.repositories.session_repository import SessionRepository
 from app.auth.application.ports.repositories.user_repository import UserRepository
 from app.auth.application.ports.token_issuer import TokenIssuer
+from app.auth.application.ports.users_client import UsersClient
 from app.auth.application.services.change_password_service import ChangePasswordService
 from app.auth.application.services.complete_register_service import CompleteRegisterService
 from app.auth.application.services.forgot_password_service import ForgotPasswordService
@@ -31,6 +32,7 @@ from app.auth.application.services.revoke_session_service import RevokeSessionSe
 from app.auth.config.settings import settings
 from app.auth.infrastructure.email.smtp_email_sender import SmtpEmailSender
 from app.auth.infrastructure.email.template_renderer import JinjaEmailTemplateRenderer
+from app.auth.infrastructure.http.users_client import HttpxUsersClient
 from app.auth.infrastructure.persistence.postgres.device_repository import (
     PostgresDeviceRepository,
 )
@@ -67,6 +69,10 @@ _email_sender = SmtpEmailSender(
     from_name=settings.smtp_from_name,
 )
 _email_template_renderer = JinjaEmailTemplateRenderer()
+_users_client = HttpxUsersClient(
+    base_url=settings.users_service_url,
+    timeout_seconds=settings.users_http_timeout_seconds,
+)
 
 
 def get_password_hasher() -> PasswordHasher:
@@ -103,6 +109,10 @@ def get_email_sender() -> EmailSender:
 
 def get_email_template_renderer() -> EmailTemplateRenderer:
     return _email_template_renderer
+
+
+def get_users_client() -> UsersClient:
+    return _users_client
 
 
 def get_user_repository(
@@ -187,12 +197,14 @@ def get_complete_register_service(
         EmailTemplateRenderer,
         Depends(get_email_template_renderer),
     ],
+    users_client: Annotated[UsersClient, Depends(get_users_client)],
 ) -> CompleteRegisterService:
     return CompleteRegisterService(
         user_repository=user_repository,
         pending_store=pending_store,
         email_sender=email_sender,
         template_renderer=template_renderer,
+        users_client=users_client,
         app_name=settings.app_name,
         login_url=settings.login_url,
     )

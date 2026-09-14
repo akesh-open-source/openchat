@@ -8,6 +8,7 @@ from app.auth.application.ports.email_sender import EmailSender
 from app.auth.application.ports.email_template_renderer import EmailTemplateRenderer
 from app.auth.application.ports.pending_registration_store import PendingRegistrationStore
 from app.auth.application.ports.repositories.user_repository import UserRepository
+from app.auth.application.ports.users_client import UsersClient
 from app.auth.domain.entities.user import User
 from app.auth.domain.exceptions import InvalidTokenError, UserAlreadyExistsError
 from app.auth.domain.value_objects.display_name import DisplayName
@@ -23,6 +24,7 @@ class CompleteRegisterService:
     pending_store: PendingRegistrationStore
     email_sender: EmailSender
     template_renderer: EmailTemplateRenderer
+    users_client: UsersClient
     app_name: str
     login_url: str
 
@@ -45,8 +47,26 @@ class CompleteRegisterService:
         )
         await self.user_repository.save(user)
         await self.pending_store.delete(command.token)
+
+        # Policy: registration succeeds even if users/email is down (log + continue).
+        # Profile create is idempotent — safe to retry later.
+        await self._create_users_profile(user)
         await self._send_welcome_email(user)
         return user
+
+    async def _create_users_profile(self, user: User) -> None:
+        try:
+            await self.users_client.create_profile(
+                user_id=user.id,
+                display_name=user.display_name.value,
+                email=user.email.value,
+            )
+        except Exception:
+            logger.exception(
+                "Failed to sync profile to users service for user_id=%s; "
+                "auth user was created — retry create-profile later",
+                user.id,
+            )
 
     async def _send_welcome_email(self, user: User) -> None:
         rendered = self.template_renderer.render_register_user(

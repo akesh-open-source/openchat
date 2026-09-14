@@ -10,10 +10,16 @@ gateway `/users` proxy.
 
 Used after verified registration so auth can create a profile without sharing DBs.
 
+**Failure policy (auth):** after the auth user is persisted, profile sync is
+**best-effort** — if the users service is down or returns an error, registration
+still succeeds and auth logs the failure. `POST /internal/profiles` is
+idempotent, so a later retry (or manual call) can create the missing profile.
+
 | | |
 |---|---|
 | Method | `POST` |
 | Path | `/internal/profiles` |
+| Caller | Auth service via `AUTH_USERS_SERVICE_URL` (Compose `edge` network) |
 | Auth | None at edge (network isolation). Do not publish this path on the gateway. |
 | Idempotency | Same `user_id` twice returns the existing profile (`created: false`). |
 
