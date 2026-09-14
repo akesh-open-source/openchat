@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,6 +24,14 @@ class PostgresProfileRepository:
 
     async def get_by_user_id(self, user_id: UUID) -> Profile | None:
         model = await self._session.get(ProfileModel, user_id)
+        return to_domain(model) if model is not None else None
+
+    async def get_by_email(self, email: str) -> Profile | None:
+        stmt = select(ProfileModel).where(
+            ProfileModel.email == email.strip().lower(),
+        )
+        result = await self._session.execute(stmt)
+        model = result.scalar_one_or_none()
         return to_domain(model) if model is not None else None
 
     async def save(self, profile: Profile) -> None:

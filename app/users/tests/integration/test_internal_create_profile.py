@@ -19,6 +19,13 @@ class InMemoryProfileRepository:
     async def get_by_user_id(self, user_id):
         return self._items.get(user_id)
 
+    async def get_by_email(self, email: str):
+        normalized = email.strip().lower()
+        for profile in self._items.values():
+            if profile.email == normalized:
+                return profile
+        return None
+
     async def save(self, profile: Profile) -> None:
         self._items[profile.user_id] = profile
 

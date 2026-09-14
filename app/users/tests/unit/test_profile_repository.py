@@ -18,6 +18,13 @@ class InMemoryProfileRepository:
     async def get_by_user_id(self, user_id: UUID) -> Profile | None:
         return self._items.get(user_id)
 
+    async def get_by_email(self, email: str) -> Profile | None:
+        normalized = email.strip().lower()
+        for profile in self._items.values():
+            if profile.email == normalized:
+                return profile
+        return None
+
     async def save(self, profile: Profile) -> None:
         self._items[profile.user_id] = profile
 
@@ -32,6 +39,7 @@ def test_profile_repository_save_get_delete_contract() -> None:
         profile = Profile.create(
             user_id=user_id,
             display_name=DisplayName("Alice"),
+            email="alice@example.com",
         )
 
         assert await repo.get_by_user_id(user_id) is None
@@ -41,6 +49,10 @@ def test_profile_repository_save_get_delete_contract() -> None:
         assert loaded is not None
         assert loaded.user_id == user_id
         assert loaded.display_name.value == "Alice"
+
+        by_email = await repo.get_by_email("  Alice@Example.COM ")
+        assert by_email is not None
+        assert by_email.user_id == user_id
 
         profile.update_display_name(DisplayName("Alice Updated"))
         await repo.save(profile)

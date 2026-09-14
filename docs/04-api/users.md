@@ -38,6 +38,32 @@ Allowed body fields (omit to leave unchanged):
 }
 ```
 
+### `GET /users/lookup`
+
+Find a user by **exact email** or **user_id** so messaging can start a 1:1 chat.
+Any authenticated caller may lookup. Provide **exactly one** of `email` or `user_id`.
+
+`email` is indexed uniquely on `profiles` (`ix_profiles_email`).
+
+```http
+GET /users/lookup?email=bob@example.com
+Authorization: Bearer <access_token>
+```
+
+```http
+GET /users/lookup?user_id=0193f2a0-0000-7000-8000-000000000002
+Authorization: Bearer <access_token>
+```
+
+Minimal response (no email/bio/secrets):
+
+```json
+{
+  "user_id": "0193f2a0-0000-7000-8000-000000000002",
+  "display_name": "Bob"
+}
+```
+
 ### Response `200 OK` (get / patch)
 
 ```json
@@ -57,6 +83,7 @@ Allowed body fields (omit to leave unchanged):
 | Status | When |
 |---|---|
 | `401` | Missing / invalid Bearer token |
+| `400` | Lookup missing both keys or providing both |
 | `404` | Profile not found |
 | `422` | Validation failure |
 

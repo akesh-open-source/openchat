@@ -20,6 +20,13 @@ class InMemoryProfileRepository:
     async def get_by_user_id(self, user_id: UUID) -> Profile | None:
         return self._items.get(user_id)
 
+    async def get_by_email(self, email: str) -> Profile | None:
+        normalized = email.strip().lower()
+        for profile in self._items.values():
+            if profile.email == normalized:
+                return profile
+        return None
+
     async def save(self, profile: Profile) -> None:
         self._items[profile.user_id] = profile
 
@@ -105,6 +112,46 @@ def test_patch_me_can_clear_bio(client: TestClient) -> None:
 def test_patch_me_validation_error(client: TestClient) -> None:
     response = client.patch("/users/me", json={"display_name": "ab"})
     assert response.status_code == 422
+
+
+def test_lookup_by_email(
+    client: TestClient,
+    other_user_id: UUID,
+) -> None:
+    response = client.get("/users/lookup", params={"email": "bob@example.com"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body == {
+        "user_id": str(other_user_id),
+        "display_name": "Bob",
+    }
+    assert "email" not in body
+    assert "bio" not in body
+
+
+def test_lookup_by_user_id(client: TestClient, other_user_id: UUID) -> None:
+    response = client.get("/users/lookup", params={"user_id": str(other_user_id)})
+    assert response.status_code == 200
+    assert response.json()["display_name"] == "Bob"
+
+
+def test_lookup_not_found(client: TestClient) -> None:
+    response = client.get(
+        "/users/lookup",
+        params={"email": "missing@example.com"},
+    )
+    assert response.status_code == 404
+
+
+def test_lookup_requires_exactly_one_key(client: TestClient) -> None:
+    assert client.get("/users/lookup").status_code == 400
+    assert (
+        client.get(
+            "/users/lookup",
+            params={"email": "a@b.com", "user_id": str(uuid4())},
+        ).status_code
+        == 400
+    )
 
 
 def test_protected_route_requires_auth_when_not_overridden() -> None:

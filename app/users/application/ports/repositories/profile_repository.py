@@ -13,6 +13,10 @@ class ProfileRepository(Protocol):
         """Return the profile for the given auth user id, or None."""
         ...
 
+    async def get_by_email(self, email: str) -> Profile | None:
+        """Return the profile with the given normalized email, or None."""
+        ...
+
     async def save(self, profile: Profile) -> None:
         """Persist a new profile or update an existing one (upsert)."""
         ...
