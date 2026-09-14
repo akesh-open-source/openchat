@@ -15,6 +15,7 @@ class Profile:
     display_name: DisplayName
     created_at: datetime
     updated_at: datetime
+    email: str | None = None
     bio: str | None = None
     avatar_url: str | None = None
 
@@ -24,13 +25,16 @@ class Profile:
         *,
         user_id: UUID,
         display_name: DisplayName,
+        email: str | None = None,
         bio: str | None = None,
         avatar_url: str | None = None,
     ) -> Profile:
         now = datetime.now(timezone.utc)
+        normalized_email = email.strip().lower() if email and email.strip() else None
         return cls(
             user_id=user_id,
             display_name=display_name,
+            email=normalized_email,
             bio=bio.strip() if bio and bio.strip() else None,
             avatar_url=avatar_url.strip() if avatar_url and avatar_url.strip() else None,
             created_at=now,

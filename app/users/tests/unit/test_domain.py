@@ -24,10 +24,12 @@ def test_profile_create_and_update() -> None:
     profile = Profile.create(
         user_id=user_id,
         display_name=DisplayName("Alice"),
+        email="  Alice@Example.COM ",
         bio="  hello  ",
     )
     assert profile.user_id == user_id
     assert profile.display_name.value == "Alice"
+    assert profile.email == "alice@example.com"
     assert profile.bio == "hello"
     assert profile.avatar_url is None
 
