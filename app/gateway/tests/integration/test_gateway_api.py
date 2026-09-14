@@ -101,6 +101,50 @@ def test_proxy_upstream_unavailable(
     assert "auth" in response.json()["detail"].lower()
 
 
+def test_proxy_users_without_jwt_returns_401(client: TestClient) -> None:
+    response = client.get("/users/me")
+    assert response.status_code == 401
+    assert response.headers.get("www-authenticate") == "Bearer"
+
+
+def test_proxy_users_with_valid_jwt(
+    client: TestClient,
+    rsa_pem_pair,
+    upstream_client: MagicMock,
+) -> None:
+    token = _access_token(rsa_pem_pair.private_pem)
+    response = client.get(
+        "/users/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+    upstream_client.request.assert_awaited_once()
+    call = upstream_client.request.await_args
+    assert call.kwargs["url"] == "http://users.test/users/me"
+    assert call.kwargs["method"] == "GET"
+
+
+def test_proxy_users_upstream_unavailable(
+    client: TestClient,
+    rsa_pem_pair,
+    upstream_client: MagicMock,
+) -> None:
+    token = _access_token(rsa_pem_pair.private_pem)
+    upstream_client.request = AsyncMock(
+        side_effect=RequestError(
+            "boom",
+            request=Request("GET", "http://users.test/users/me"),
+        )
+    )
+    response = client.get(
+        "/users/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 502
+    assert "users" in response.json()["detail"].lower()
+
+
 def test_proxy_edge_rate_limit(
     monkeypatch: pytest.MonkeyPatch,
     rsa_pem_pair,
