@@ -6,6 +6,62 @@ Internal routes are **Compose-only** — call the users service directly on the
 `edge` network (e.g. `http://users:8002`). They are **not** exposed through the
 gateway `/users` proxy.
 
+## Public: get / update profile
+
+Gateway proxies `/users/*` and requires a Bearer access token. Users re-verifies
+the JWT with the auth public key (`sub` = caller user id).
+
+### `GET /users/me`
+
+Returns the caller's profile.
+
+### `GET /users/{user_id}`
+
+Returns another user's profile (any authenticated caller). `404` if missing.
+
+### `PATCH /users/me`
+
+Update **own** profile only (no `PATCH /users/{user_id}`).
+
+Allowed body fields (omit to leave unchanged):
+
+| Field | Notes |
+|---|---|
+| `display_name` | 3–30 characters |
+| `bio` | optional; send `""` or `null` to clear |
+| `avatar_url` | optional; send `""` or `null` to clear |
+
+```json
+{
+  "display_name": "Alice Updated",
+  "bio": "Building OpenChat"
+}
+```
+
+### Response `200 OK` (get / patch)
+
+```json
+{
+  "user_id": "0193f2a0-0000-7000-8000-000000000001",
+  "display_name": "Alice",
+  "email": "alice@example.com",
+  "bio": "hello",
+  "avatar_url": null,
+  "created_at": "2026-09-15T01:00:00Z",
+  "updated_at": "2026-09-15T01:00:00Z"
+}
+```
+
+### Errors (public)
+
+| Status | When |
+|---|---|
+| `401` | Missing / invalid Bearer token |
+| `404` | Profile not found |
+| `422` | Validation failure |
+
+---
+
 ## Internal: create profile (auth → users)
 
 Used after verified registration so auth can create a profile without sharing DBs.

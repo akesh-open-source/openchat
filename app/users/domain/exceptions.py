@@ -12,3 +12,11 @@ class ProfileAlreadyExistsError(DomainError):
 
 class ProfileNotFoundError(DomainError):
     """Raised when a profile does not exist for the given user_id."""
+
+
+class InvalidTokenError(DomainError):
+    """Raised when an access token is missing, malformed, or expired."""
+
+
+class ForbiddenError(DomainError):
+    """Raised when the caller is not allowed to perform the action."""
