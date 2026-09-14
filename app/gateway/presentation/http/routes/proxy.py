@@ -91,3 +91,39 @@ async def proxy_auth(
         headers=_filter_headers(dict(upstream.headers)),
         media_type=upstream.headers.get("content-type"),
     )
+
+
+@router.api_route(
+    "/users/{path:path}",
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+)
+async def proxy_users(
+    path: str,
+    request: Request,
+    client: Annotated[AsyncClient, Depends(get_upstream_client)],
+) -> Response:
+    # All /users/* routes require a valid access token at the edge.
+    get_current_user_id(request)
+
+    upstream_url = f"{settings.users_service_url.rstrip('/')}/users/{path}"
+    body = await request.body()
+    headers = _filter_headers(dict(request.headers))
+
+    try:
+        upstream = await client.request(
+            method=request.method,
+            url=upstream_url,
+            content=body,
+            headers=headers,
+            params=request.query_params,
+        )
+    except RequestError as exc:
+        logger.warning("Users upstream request failed path=%s error=%s", path, exc)
+        raise UpstreamUnavailableError("users") from exc
+
+    return Response(
+        content=upstream.content,
+        status_code=upstream.status_code,
+        headers=_filter_headers(dict(upstream.headers)),
+        media_type=upstream.headers.get("content-type"),
+    )

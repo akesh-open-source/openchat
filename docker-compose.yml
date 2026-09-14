@@ -142,6 +142,8 @@ services:
     depends_on:
       auth:
         condition: service_healthy
+      users:
+        condition: service_healthy
 
 networks:
   auth-internal:
