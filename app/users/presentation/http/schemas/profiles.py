@@ -14,6 +14,13 @@ class ProfileResponse(BaseModel):
     updated_at: datetime
 
 
+class LookupProfileResponse(BaseModel):
+    """Minimal identity for starting a chat — no email/bio/secrets."""
+
+    user_id: UUID
+    display_name: str
+
+
 class UpdateProfileRequest(BaseModel):
     """Only these fields may be updated; omit a field to leave it unchanged."""
 
