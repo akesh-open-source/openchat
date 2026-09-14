@@ -19,6 +19,9 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from app.users.config.settings import settings  # noqa: E402
 from app.users.infrastructure.persistence.postgres.base import Base  # noqa: E402
+from app.users.infrastructure.persistence.postgres.models import (  # noqa: E402, F401
+    ProfileModel,
+)
 
 config = context.config
 if config.config_file_name is not None:

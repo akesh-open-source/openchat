@@ -9,4 +9,5 @@ python -m pytest \
   app/auth/tests/integration \
   app/gateway/tests/unit \
   app/gateway/tests/integration \
+  app/users/tests/unit \
   "$@"
