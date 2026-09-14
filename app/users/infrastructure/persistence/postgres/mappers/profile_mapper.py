@@ -9,6 +9,7 @@ def to_domain(model: ProfileModel) -> Profile:
     return Profile(
         user_id=model.user_id,
         display_name=DisplayName(model.display_name),
+        email=model.email,
         bio=model.bio,
         avatar_url=model.avatar_url,
         created_at=model.created_at,
@@ -20,6 +21,7 @@ def to_model(profile: Profile) -> ProfileModel:
     return ProfileModel(
         user_id=profile.user_id,
         display_name=profile.display_name.value,
+        email=profile.email,
         bio=profile.bio,
         avatar_url=profile.avatar_url,
         created_at=profile.created_at,
@@ -29,6 +31,7 @@ def to_model(profile: Profile) -> ProfileModel:
 
 def apply_domain(model: ProfileModel, profile: Profile) -> None:
     model.display_name = profile.display_name.value
+    model.email = profile.email
     model.bio = profile.bio
     model.avatar_url = profile.avatar_url
     model.updated_at = profile.updated_at

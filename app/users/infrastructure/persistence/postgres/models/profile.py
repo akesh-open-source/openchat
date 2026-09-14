@@ -15,6 +15,12 @@ class ProfileModel(Base):
     # Same UUID as auth.users.id — assigned by auth, not generated here.
     user_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
     display_name: Mapped[str] = mapped_column(String(30), nullable=False)
+    email: Mapped[str | None] = mapped_column(
+        String(254),
+        unique=True,
+        nullable=True,
+        index=True,
+    )
     bio: Mapped[str | None] = mapped_column(Text, nullable=True)
     avatar_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
