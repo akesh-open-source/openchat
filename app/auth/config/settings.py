@@ -64,5 +64,9 @@ class Settings(BaseSettings):
     rate_limit_refresh_per_window: int = 30
     rate_limit_default_per_window: int = 60
 
+    # Users service (Compose-internal profile sync after register).
+    users_service_url: str = "http://localhost:8002"
+    users_http_timeout_seconds: float = 5.0
+
 
 settings = Settings()
