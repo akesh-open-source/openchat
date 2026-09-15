@@ -24,3 +24,7 @@ class MembershipNotFoundError(DomainError):
 
 class MembershipAlreadyExistsError(DomainError):
     """Raised when a membership row already exists."""
+
+
+class InvalidTokenError(DomainError):
+    """Raised when an access token is missing, malformed, or expired."""

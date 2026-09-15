@@ -12,4 +12,5 @@ python -m pytest \
   app/users/tests/unit \
   app/users/tests/integration \
   app/messaging/tests/unit \
+  app/messaging/tests/integration \
   "$@"

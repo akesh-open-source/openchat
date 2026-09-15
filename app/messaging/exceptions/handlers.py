@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app.messaging.domain.exceptions import DomainError
+from app.messaging.domain.exceptions import DomainError, InvalidTokenError
 from app.messaging.exceptions.mapping import EXCEPTION_STATUS_MAP
 
 
@@ -17,9 +17,14 @@ def register_exception_handlers(app: FastAPI) -> None:
             type(exc),
             EXCEPTION_STATUS_MAP[DomainError],
         )
+        headers: dict[str, str] = {}
+        if isinstance(exc, InvalidTokenError):
+            headers["WWW-Authenticate"] = "Bearer"
+
         return JSONResponse(
             status_code=status_code,
             content={
                 "detail": str(exc) or exc.__class__.__name__,
             },
+            headers=headers,
         )
