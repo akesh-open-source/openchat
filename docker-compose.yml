@@ -8,7 +8,7 @@
 #   app/gateway/.env    — gateway (see app/gateway/.env.example)
 # JWT keys:
 #   secrets/jwt/private.pem — auth only (see secrets/jwt/README.md)
-#   secrets/jwt/public.pem  — auth + gateway
+#   secrets/jwt/public.pem  — auth + gateway + users + messaging
 #
 # Networks:
 #   auth-internal       — postgres-auth ↔ auth-redis ↔ auth (DB/cache not on edge)
@@ -154,6 +154,9 @@ services:
       dockerfile: app/messaging/Dockerfile
     env_file:
       - app/messaging/.env
+    volumes:
+      # Public key only — messaging verifies access JWTs (gateway also verifies).
+      - ./secrets/jwt/public.pem:/run/secrets/jwt_public.pem:ro
     ports:
       - "8003:8003"
     networks:

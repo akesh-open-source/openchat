@@ -44,9 +44,12 @@ class PostgresConversationRepository:
         return to_domain(model) if model is not None else None
 
     async def save(self, conversation: Conversation) -> None:
-        self._session.add(to_model(conversation))
+        # Nested transaction so a unique-pair conflict can be handled and
+        # the outer request transaction can still read the winning row.
         try:
-            await self._session.flush()
+            async with self._session.begin_nested():
+                self._session.add(to_model(conversation))
+                await self._session.flush()
         except IntegrityError as exc:
             raise ConversationAlreadyExistsError(
                 f"Direct conversation already exists for pair "
