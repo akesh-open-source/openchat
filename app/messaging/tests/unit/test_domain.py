@@ -34,6 +34,7 @@ def test_conversation_create_direct_sorts_pair() -> None:
     assert conversation.is_direct
     assert conversation.direct_user_a_id == low
     assert conversation.direct_user_b_id == high
+    assert conversation.next_sequence == 0
 
 
 def test_conversation_create_direct_rejects_self() -> None:

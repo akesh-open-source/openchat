@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timedelta, timezone
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -17,11 +18,43 @@ from app.messaging.application.services.list_conversations_service import (
 )
 from app.messaging.domain.entities.conversation import Conversation
 from app.messaging.domain.entities.membership import Membership
-from app.messaging.domain.exceptions import ConversationNotFoundError, InvalidCursorError
+from app.messaging.domain.entities.message import Message
+from app.messaging.domain.exceptions import (
+    ConversationNotFoundError,
+    InvalidCursorError,
+    UsersUnavailableError,
+)
 from app.messaging.tests.unit.test_repositories import (
     InMemoryConversationRepository,
     InMemoryMembershipRepository,
+    InMemoryMessageRepository,
 )
+
+
+def _list_service(
+    conversations: InMemoryConversationRepository,
+    messages: InMemoryMessageRepository,
+    users_client: MagicMock,
+) -> ListConversationsService:
+    return ListConversationsService(
+        conversation_repository=conversations,
+        message_repository=messages,
+        users_client=users_client,
+    )
+
+
+def _get_service(
+    conversations: InMemoryConversationRepository,
+    memberships: InMemoryMembershipRepository,
+    messages: InMemoryMessageRepository,
+    users_client: MagicMock,
+) -> GetConversationService:
+    return GetConversationService(
+        conversation_repository=conversations,
+        membership_repository=memberships,
+        message_repository=messages,
+        users_client=users_client,
+    )
 
 
 def test_conversation_list_cursor_roundtrip() -> None:
@@ -43,7 +76,10 @@ def test_list_conversations_paginates_and_filters_membership() -> None:
     async def _run() -> None:
         memberships = InMemoryMembershipRepository()
         conversations = InMemoryConversationRepository(memberships)
-        service = ListConversationsService(conversation_repository=conversations)
+        messages = InMemoryMessageRepository()
+        users_client = MagicMock()
+        users_client.get_display_names = AsyncMock(return_value={})
+        service = _list_service(conversations, messages, users_client)
 
         user_id = uuid4()
         outsider = uuid4()
@@ -87,7 +123,11 @@ def test_list_conversations_paginates_and_filters_membership() -> None:
         )
 
         first_page = await service.execute(
-            ListConversationsQuery(user_id=user_id, limit=2),
+            ListConversationsQuery(
+                user_id=user_id,
+                access_token="tok",
+                limit=2,
+            ),
         )
         assert len(first_page.items) == 2
         assert first_page.next_cursor is not None
@@ -96,6 +136,7 @@ def test_list_conversations_paginates_and_filters_membership() -> None:
         second_page = await service.execute(
             ListConversationsQuery(
                 user_id=user_id,
+                access_token="tok",
                 limit=2,
                 cursor=first_page.next_cursor,
             ),
@@ -109,14 +150,88 @@ def test_list_conversations_paginates_and_filters_membership() -> None:
     asyncio.run(_run())
 
 
+def test_list_conversations_enriches_peer_name_and_last_message() -> None:
+    async def _run() -> None:
+        memberships = InMemoryMembershipRepository()
+        conversations = InMemoryConversationRepository(memberships)
+        messages = InMemoryMessageRepository()
+        user_id = uuid4()
+        peer = uuid4()
+        conversation = Conversation.create_direct(user_a_id=user_id, user_b_id=peer)
+        await conversations.save(conversation)
+        await memberships.save_many(
+            [
+                Membership.create(conversation_id=conversation.id, user_id=user_id),
+                Membership.create(conversation_id=conversation.id, user_id=peer),
+            ]
+        )
+        message = Message.create(
+            conversation_id=conversation.id,
+            sender_id=peer,
+            client_message_id="m1",
+            sequence=1,
+            body="hello there",
+        )
+        await messages.save(message)
+
+        users_client = MagicMock()
+        users_client.get_display_names = AsyncMock(return_value={peer: "Ada"})
+        service = _list_service(conversations, messages, users_client)
+
+        result = await service.execute(
+            ListConversationsQuery(user_id=user_id, access_token="tok"),
+        )
+        assert len(result.items) == 1
+        item = result.items[0]
+        assert item.peer_user_id == peer
+        assert item.peer_display_name == "Ada"
+        assert item.last_message_preview == "hello there"
+        assert item.last_message_at == message.created_at
+        assert item.last_activity_at == message.created_at
+        users_client.get_display_names.assert_awaited_once()
+
+    asyncio.run(_run())
+
+
+def test_list_conversations_soft_fails_when_users_unavailable() -> None:
+    async def _run() -> None:
+        memberships = InMemoryMembershipRepository()
+        conversations = InMemoryConversationRepository(memberships)
+        messages = InMemoryMessageRepository()
+        user_id = uuid4()
+        peer = uuid4()
+        conversation = Conversation.create_direct(user_a_id=user_id, user_b_id=peer)
+        await conversations.save(conversation)
+        await memberships.save_many(
+            [
+                Membership.create(conversation_id=conversation.id, user_id=user_id),
+                Membership.create(conversation_id=conversation.id, user_id=peer),
+            ]
+        )
+
+        users_client = MagicMock()
+        users_client.get_display_names = AsyncMock(
+            side_effect=UsersUnavailableError("down"),
+        )
+        service = _list_service(conversations, messages, users_client)
+
+        result = await service.execute(
+            ListConversationsQuery(user_id=user_id, access_token="tok"),
+        )
+        assert result.items[0].peer_display_name is None
+        assert result.items[0].last_message_preview is None
+
+    asyncio.run(_run())
+
+
 def test_get_conversation_requires_membership() -> None:
     async def _run() -> None:
         memberships = InMemoryMembershipRepository()
         conversations = InMemoryConversationRepository(memberships)
-        service = GetConversationService(
-            conversation_repository=conversations,
-            membership_repository=memberships,
-        )
+        messages = InMemoryMessageRepository()
+        users_client = MagicMock()
+        users_client.get_display_names = AsyncMock(return_value={})
+        service = _get_service(conversations, memberships, messages, users_client)
 
         owner = uuid4()
         peer = uuid4()
@@ -131,7 +246,11 @@ def test_get_conversation_requires_membership() -> None:
         )
 
         summary = await service.execute(
-            GetConversationQuery(user_id=owner, conversation_id=conversation.id),
+            GetConversationQuery(
+                user_id=owner,
+                conversation_id=conversation.id,
+                access_token="tok",
+            ),
         )
         assert summary.id == conversation.id
         assert summary.peer_user_id == peer
@@ -142,6 +261,7 @@ def test_get_conversation_requires_membership() -> None:
                 GetConversationQuery(
                     user_id=stranger,
                     conversation_id=conversation.id,
+                    access_token="tok",
                 ),
             )
 

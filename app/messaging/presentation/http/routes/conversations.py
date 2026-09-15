@@ -54,6 +54,8 @@ def _to_conversation_response(summary: ConversationSummary) -> ConversationRespo
         type=summary.type.value,
         peer_user_id=summary.peer_user_id,
         peer_display_name=summary.peer_display_name,
+        last_message_preview=summary.last_message_preview,
+        last_message_at=summary.last_message_at,
         last_activity_at=summary.last_activity_at,
         created_at=summary.created_at,
         updated_at=summary.updated_at,
@@ -99,13 +101,19 @@ async def create_or_get_direct_conversation(
 )
 async def list_conversations(
     user_id: UUID = Depends(get_current_user_id),
+    access_token: str = Depends(get_access_token),
     limit: int = Query(default=20, ge=1, le=100),
     cursor: str | None = Query(default=None),
     service: ListConversationsService = Depends(get_list_conversations_service),
 ) -> ConversationListResponse:
     """List conversations the caller is a member of (newest activity first)."""
     result = await service.execute(
-        ListConversationsQuery(user_id=user_id, limit=limit, cursor=cursor),
+        ListConversationsQuery(
+            user_id=user_id,
+            access_token=access_token,
+            limit=limit,
+            cursor=cursor,
+        ),
     )
     return ConversationListResponse(
         items=[_to_conversation_response(item) for item in result.items],
@@ -121,10 +129,15 @@ async def list_conversations(
 async def get_conversation(
     conversation_id: UUID,
     user_id: UUID = Depends(get_current_user_id),
+    access_token: str = Depends(get_access_token),
     service: GetConversationService = Depends(get_get_conversation_service),
 ) -> ConversationResponse:
     """Get one conversation if the caller is a member; otherwise 404."""
     summary = await service.execute(
-        GetConversationQuery(user_id=user_id, conversation_id=conversation_id),
+        GetConversationQuery(
+            user_id=user_id,
+            conversation_id=conversation_id,
+            access_token=access_token,
+        ),
     )
     return _to_conversation_response(summary)

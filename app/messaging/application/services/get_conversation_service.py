@@ -10,6 +10,13 @@ from app.messaging.application.ports.repositories.conversation_repository import
 from app.messaging.application.ports.repositories.membership_repository import (
     MembershipRepository,
 )
+from app.messaging.application.ports.repositories.message_repository import (
+    MessageRepository,
+)
+from app.messaging.application.ports.users_client import UsersClient
+from app.messaging.application.services.conversation_summary_enricher import (
+    build_conversation_summaries,
+)
 from app.messaging.domain.exceptions import ConversationNotFoundError
 
 
@@ -17,6 +24,8 @@ from app.messaging.domain.exceptions import ConversationNotFoundError
 class GetConversationService:
     conversation_repository: ConversationRepository
     membership_repository: MembershipRepository
+    message_repository: MessageRepository
+    users_client: UsersClient
 
     async def execute(self, query: GetConversationQuery) -> ConversationSummary:
         membership = await self.membership_repository.get(
@@ -33,7 +42,11 @@ class GetConversationService:
         if conversation is None:
             raise ConversationNotFoundError("Conversation not found")
 
-        return ConversationSummary.from_conversation(
-            conversation,
+        summaries = await build_conversation_summaries(
+            conversations=[conversation],
             viewer_id=query.user_id,
+            access_token=query.access_token,
+            message_repository=self.message_repository,
+            users_client=self.users_client,
         )
+        return summaries[0]

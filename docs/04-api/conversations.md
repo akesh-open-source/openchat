@@ -13,8 +13,9 @@ Messaging re-verifies the access JWT with the auth public key (`sub` = caller).
 
 | Table | Purpose |
 |---|---|
-| `conversations` | Chat threads. `type=direct` now; `group` later. Direct rows store a sorted pair (`direct_user_a_id` < `direct_user_b_id`) with a unique constraint so each 1:1 pair has one conversation. |
+| `conversations` | Chat threads. `type=direct` now; `group` later. Direct rows store a sorted pair (`direct_user_a_id` < `direct_user_b_id`) with a unique constraint so each 1:1 pair has one conversation. Also stores `next_sequence` for server-side message ordering. |
 | `memberships` | `(conversation_id, user_id)` PK, `role` (`member`/`admin`), `joined_at`. |
+| `messages` | Persisted chat messages with per-conversation `sequence`, `client_message_id`, and `body`. Used for last-message preview on list/get. |
 
 ## `POST /conversations/direct`
 
@@ -81,7 +82,9 @@ List conversations the **caller is a member of** only (newest `updated_at` first
       "id": "<uuid>",
       "type": "direct",
       "peer_user_id": "<uuid>",
-      "peer_display_name": null,
+      "peer_display_name": "Ada",
+      "last_message_preview": "hello…",
+      "last_message_at": "...",
       "last_activity_at": "...",
       "created_at": "...",
       "updated_at": "..."
@@ -91,8 +94,13 @@ List conversations the **caller is a member of** only (newest `updated_at` first
 }
 ```
 
-- `peer_display_name` is **stubbed `null` for MVP** (no batch users lookup on list).
-- `last_activity_at` currently mirrors `updated_at` until messages bump activity.
+- `peer_display_name` comes from users lookup (`GET /users/lookup`) for each
+  peer on the page (caller JWT forwarded). If users is down, names are `null`
+  and the list still returns `200`.
+- `last_message_preview` / `last_message_at` are from the highest-`sequence`
+  message in that conversation (preview truncated to ~200 chars). Both are
+  `null` when there are no messages yet.
+- `last_activity_at` is `last_message_at` when present, otherwise `updated_at`.
 - Cursor is keyset on `(updated_at DESC, id DESC)`.
 
 ### Errors
@@ -113,7 +121,8 @@ Non-members and unknown ids both return **`404`** (do not leak existence).
 
 ### Response `200`
 
-Same item shape as list entries.
+Same item shape as list entries (including peer display name and last-message
+preview).
 
 ### Errors
 

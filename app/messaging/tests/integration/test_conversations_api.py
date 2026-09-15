@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
@@ -7,12 +8,14 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from app.messaging.domain.entities.message import Message
 from app.messaging.exceptions.handlers import register_exception_handlers
 from app.messaging.presentation.http import dependencies as deps
 from app.messaging.presentation.http.routes import router
 from app.messaging.tests.unit.test_repositories import (
     InMemoryConversationRepository,
     InMemoryMembershipRepository,
+    InMemoryMessageRepository,
 )
 
 
@@ -39,9 +42,19 @@ def conversation_repository(
 
 
 @pytest.fixture
+def message_repository() -> InMemoryMessageRepository:
+    return InMemoryMessageRepository()
+
+
+@pytest.fixture
 def users_client() -> MagicMock:
     client = MagicMock()
     client.user_exists = AsyncMock(return_value=True)
+    client.get_display_names = AsyncMock(
+        side_effect=lambda *, user_ids, access_token: {
+            uid: f"User-{str(uid)[:8]}" for uid in user_ids
+        },
+    )
     return client
 
 
@@ -49,6 +62,7 @@ def users_client() -> MagicMock:
 def client(
     conversation_repository: InMemoryConversationRepository,
     membership_repository: InMemoryMembershipRepository,
+    message_repository: InMemoryMessageRepository,
     users_client: MagicMock,
     user_id: UUID,
 ) -> TestClient:
@@ -61,6 +75,7 @@ def client(
     app.dependency_overrides[deps.get_membership_repository] = (
         lambda: membership_repository
     )
+    app.dependency_overrides[deps.get_message_repository] = lambda: message_repository
     app.dependency_overrides[deps.get_users_client] = lambda: users_client
     app.dependency_overrides[deps.get_current_user_id] = lambda: user_id
     app.dependency_overrides[deps.get_access_token] = lambda: "test-token"
@@ -122,6 +137,7 @@ def test_create_direct_rejects_self_chat(
 def test_create_direct_requires_auth(
     conversation_repository: InMemoryConversationRepository,
     membership_repository: InMemoryMembershipRepository,
+    message_repository: InMemoryMessageRepository,
     users_client: MagicMock,
     peer_user_id: UUID,
 ) -> None:
@@ -134,6 +150,7 @@ def test_create_direct_requires_auth(
     app.dependency_overrides[deps.get_membership_repository] = (
         lambda: membership_repository
     )
+    app.dependency_overrides[deps.get_message_repository] = lambda: message_repository
     app.dependency_overrides[deps.get_users_client] = lambda: users_client
     # Do not override auth deps — missing Bearer → 401.
 
@@ -146,9 +163,10 @@ def test_create_direct_requires_auth(
     assert response.headers.get("www-authenticate") == "Bearer"
 
 
-def test_list_conversations_returns_only_caller_memberships(
+def test_list_conversations_returns_peer_name_and_empty_preview(
     client: TestClient,
     peer_user_id: UUID,
+    users_client: MagicMock,
 ) -> None:
     created = client.post(
         "/conversations/direct",
@@ -161,10 +179,41 @@ def test_list_conversations_returns_only_caller_memberships(
     assert listed.status_code == 200
     body = listed.json()
     assert len(body["items"]) == 1
-    assert body["items"][0]["id"] == conversation_id
-    assert body["items"][0]["peer_user_id"] == str(peer_user_id)
-    assert body["items"][0]["peer_display_name"] is None
+    item = body["items"][0]
+    assert item["id"] == conversation_id
+    assert item["peer_user_id"] == str(peer_user_id)
+    assert item["peer_display_name"] == f"User-{str(peer_user_id)[:8]}"
+    assert item["last_message_preview"] is None
+    assert item["last_message_at"] is None
     assert body["next_cursor"] is None
+    users_client.get_display_names.assert_awaited()
+
+
+def test_list_conversations_includes_last_message_preview(
+    client: TestClient,
+    peer_user_id: UUID,
+    message_repository: InMemoryMessageRepository,
+    user_id: UUID,
+) -> None:
+    created = client.post(
+        "/conversations/direct",
+        json={"peer_user_id": str(peer_user_id)},
+    )
+    conversation_id = UUID(created.json()["id"])
+    message = Message.create(
+        conversation_id=conversation_id,
+        sender_id=user_id,
+        client_message_id="cid-1",
+        sequence=1,
+        body="latest preview text",
+    )
+    asyncio.run(message_repository.save(message))
+
+    listed = client.get("/conversations")
+    assert listed.status_code == 200
+    item = listed.json()["items"][0]
+    assert item["last_message_preview"] == "latest preview text"
+    assert item["last_message_at"] is not None
 
 
 def test_get_conversation_by_id_for_member(
@@ -179,13 +228,16 @@ def test_get_conversation_by_id_for_member(
 
     response = client.get(f"/conversations/{conversation_id}")
     assert response.status_code == 200
-    assert response.json()["id"] == conversation_id
-    assert response.json()["peer_user_id"] == str(peer_user_id)
+    body = response.json()
+    assert body["id"] == conversation_id
+    assert body["peer_user_id"] == str(peer_user_id)
+    assert body["peer_display_name"] == f"User-{str(peer_user_id)[:8]}"
 
 
 def test_get_conversation_by_id_for_non_member_returns_404(
     conversation_repository: InMemoryConversationRepository,
     membership_repository: InMemoryMembershipRepository,
+    message_repository: InMemoryMessageRepository,
     users_client: MagicMock,
     user_id: UUID,
     peer_user_id: UUID,
@@ -200,6 +252,7 @@ def test_get_conversation_by_id_for_non_member_returns_404(
     app.dependency_overrides[deps.get_membership_repository] = (
         lambda: membership_repository
     )
+    app.dependency_overrides[deps.get_message_repository] = lambda: message_repository
     app.dependency_overrides[deps.get_users_client] = lambda: users_client
     app.dependency_overrides[deps.get_current_user_id] = lambda: user_id
     app.dependency_overrides[deps.get_access_token] = lambda: "test-token"

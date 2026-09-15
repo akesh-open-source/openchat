@@ -16,6 +16,8 @@ class ConversationSummary:
     type: ConversationType
     peer_user_id: UUID | None
     peer_display_name: str | None
+    last_message_preview: str | None
+    last_message_at: datetime | None
     last_activity_at: datetime
     created_at: datetime
     updated_at: datetime
@@ -38,8 +40,9 @@ class ConversationSummary:
             id=conversation.id,
             type=conversation.type,
             peer_user_id=peer_user_id,
-            # Stub until messaging batches display names from users.
             peer_display_name=None,
+            last_message_preview=None,
+            last_message_at=None,
             last_activity_at=conversation.updated_at,
             created_at=conversation.created_at,
             updated_at=conversation.updated_at,

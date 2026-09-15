@@ -22,6 +22,7 @@ from app.messaging.infrastructure.persistence.postgres.base import Base  # noqa:
 from app.messaging.infrastructure.persistence.postgres.models import (  # noqa: E402, F401
     ConversationModel,
     MembershipModel,
+    MessageModel,
 )
 
 config = context.config

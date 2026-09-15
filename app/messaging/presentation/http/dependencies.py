@@ -12,6 +12,9 @@ from app.messaging.application.ports.repositories.conversation_repository import
 from app.messaging.application.ports.repositories.membership_repository import (
     MembershipRepository,
 )
+from app.messaging.application.ports.repositories.message_repository import (
+    MessageRepository,
+)
 from app.messaging.application.ports.users_client import UsersClient
 from app.messaging.application.services.get_conversation_service import (
     GetConversationService,
@@ -29,6 +32,9 @@ from app.messaging.infrastructure.persistence.postgres.conversation_repository i
 )
 from app.messaging.infrastructure.persistence.postgres.membership_repository import (
     PostgresMembershipRepository,
+)
+from app.messaging.infrastructure.persistence.postgres.message_repository import (
+    PostgresMessageRepository,
 )
 from app.messaging.infrastructure.persistence.postgres.session import get_session
 from app.messaging.security.authentication import (
@@ -52,6 +58,12 @@ def get_membership_repository(
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> MembershipRepository:
     return PostgresMembershipRepository(session)
+
+
+def get_message_repository(
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> MessageRepository:
+    return PostgresMessageRepository(session)
 
 
 def get_users_client() -> UsersClient:
@@ -81,8 +93,17 @@ def get_list_conversations_service(
         ConversationRepository,
         Depends(get_conversation_repository),
     ],
+    message_repository: Annotated[
+        MessageRepository,
+        Depends(get_message_repository),
+    ],
+    users_client: Annotated[UsersClient, Depends(get_users_client)],
 ) -> ListConversationsService:
-    return ListConversationsService(conversation_repository=conversation_repository)
+    return ListConversationsService(
+        conversation_repository=conversation_repository,
+        message_repository=message_repository,
+        users_client=users_client,
+    )
 
 
 def get_get_conversation_service(
@@ -94,10 +115,17 @@ def get_get_conversation_service(
         MembershipRepository,
         Depends(get_membership_repository),
     ],
+    message_repository: Annotated[
+        MessageRepository,
+        Depends(get_message_repository),
+    ],
+    users_client: Annotated[UsersClient, Depends(get_users_client)],
 ) -> GetConversationService:
     return GetConversationService(
         conversation_repository=conversation_repository,
         membership_repository=membership_repository,
+        message_repository=message_repository,
+        users_client=users_client,
     )
 
 

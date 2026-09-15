@@ -8,3 +8,4 @@ from uuid import UUID
 class GetConversationQuery:
     user_id: UUID
     conversation_id: UUID
+    access_token: str
