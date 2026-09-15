@@ -50,8 +50,14 @@ def client(
     monkeypatch.setattr(rate_limit_mod.settings, "rate_limit_window_seconds", 60)
     monkeypatch.setattr(proxy_mod.settings, "auth_service_url", "http://auth.test")
     monkeypatch.setattr(proxy_mod.settings, "users_service_url", "http://users.test")
+    monkeypatch.setattr(
+        proxy_mod.settings, "messaging_service_url", "http://messaging.test"
+    )
     monkeypatch.setattr(settings_mod.settings, "auth_service_url", "http://auth.test")
     monkeypatch.setattr(settings_mod.settings, "users_service_url", "http://users.test")
+    monkeypatch.setattr(
+        settings_mod.settings, "messaging_service_url", "http://messaging.test"
+    )
 
     app = FastAPI()
     register_exception_handlers(app)
