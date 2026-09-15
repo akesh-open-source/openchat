@@ -7,7 +7,10 @@ from app.messaging.application.dto.conversation_list_cursor import ConversationL
 from app.messaging.domain.entities.conversation import Conversation
 from app.messaging.domain.entities.membership import Membership
 from app.messaging.domain.entities.message import Message
-from app.messaging.domain.exceptions import MessageAlreadyExistsError
+from app.messaging.domain.exceptions import (
+    ConversationNotFoundError,
+    MessageAlreadyExistsError,
+)
 from app.messaging.domain.value_objects.membership_role import MembershipRole
 from app.messaging.domain.value_objects.user_pair import sorted_user_pair
 
@@ -56,6 +59,15 @@ class InMemoryConversationRepository:
     ) -> None:
         self._by_id: dict[UUID, Conversation] = {}
         self._memberships = memberships
+        # Per-conversation locks simulate Postgres FOR UPDATE serialization.
+        self._sequence_locks: dict[UUID, asyncio.Lock] = {}
+
+    def _lock_for(self, conversation_id: UUID) -> asyncio.Lock:
+        lock = self._sequence_locks.get(conversation_id)
+        if lock is None:
+            lock = asyncio.Lock()
+            self._sequence_locks[conversation_id] = lock
+        return lock
 
     async def get_by_id(self, conversation_id: UUID) -> Conversation | None:
         return self._by_id.get(conversation_id)
@@ -107,6 +119,15 @@ class InMemoryConversationRepository:
 
     async def save(self, conversation: Conversation) -> None:
         self._by_id[conversation.id] = conversation
+
+    async def allocate_next_sequence(self, conversation_id: UUID) -> int:
+        async with self._lock_for(conversation_id):
+            conversation = self._by_id.get(conversation_id)
+            if conversation is None:
+                raise ConversationNotFoundError("Conversation not found")
+            # Yield so concurrent waiters can contend on the lock (stresses serialization).
+            await asyncio.sleep(0)
+            return conversation.allocate_next_sequence()
 
 
 class InMemoryMessageRepository:
