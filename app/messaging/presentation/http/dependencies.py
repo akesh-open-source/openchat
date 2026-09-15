@@ -12,9 +12,12 @@ from app.messaging.application.ports.repositories.conversation_repository import
 from app.messaging.application.ports.repositories.membership_repository import (
     MembershipRepository,
 )
+from app.messaging.application.ports.users_client import UsersClient
 from app.messaging.application.services.get_or_create_direct_conversation_service import (
     GetOrCreateDirectConversationService,
 )
+from app.messaging.config.settings import settings
+from app.messaging.infrastructure.http.users_client import HttpxUsersClient
 from app.messaging.infrastructure.persistence.postgres.conversation_repository import (
     PostgresConversationRepository,
 )
@@ -25,6 +28,11 @@ from app.messaging.infrastructure.persistence.postgres.session import get_sessio
 from app.messaging.security.authentication import (
     extract_bearer_token,
     verify_access_token,
+)
+
+_users_client = HttpxUsersClient(
+    base_url=settings.users_service_url,
+    timeout_seconds=settings.users_http_timeout_seconds,
 )
 
 
@@ -40,6 +48,10 @@ def get_membership_repository(
     return PostgresMembershipRepository(session)
 
 
+def get_users_client() -> UsersClient:
+    return _users_client
+
+
 def get_get_or_create_direct_conversation_service(
     conversation_repository: Annotated[
         ConversationRepository,
@@ -49,10 +61,12 @@ def get_get_or_create_direct_conversation_service(
         MembershipRepository,
         Depends(get_membership_repository),
     ],
+    users_client: Annotated[UsersClient, Depends(get_users_client)],
 ) -> GetOrCreateDirectConversationService:
     return GetOrCreateDirectConversationService(
         conversation_repository=conversation_repository,
         membership_repository=membership_repository,
+        users_client=users_client,
     )
 
 
@@ -60,3 +74,8 @@ def get_current_user_id(request: Request) -> UUID:
     """Require a valid Bearer access token; return subject user id."""
     token = extract_bearer_token(request)
     return verify_access_token(token)
+
+
+def get_access_token(request: Request) -> str:
+    """Return the raw Bearer token for forwarding to upstream services."""
+    return extract_bearer_token(request)

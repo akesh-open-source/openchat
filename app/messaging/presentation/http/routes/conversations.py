@@ -12,6 +12,7 @@ from app.messaging.application.services.get_or_create_direct_conversation_servic
 )
 from app.messaging.domain.entities.conversation import Conversation
 from app.messaging.presentation.http.dependencies import (
+    get_access_token,
     get_current_user_id,
     get_get_or_create_direct_conversation_service,
 )
@@ -42,6 +43,7 @@ def _peer_user_id(conversation: Conversation, caller_id: UUID) -> UUID:
 async def create_or_get_direct_conversation(
     body: CreateDirectConversationRequest,
     user_id: UUID = Depends(get_current_user_id),
+    access_token: str = Depends(get_access_token),
     service: GetOrCreateDirectConversationService = Depends(
         get_get_or_create_direct_conversation_service,
     ),
@@ -51,6 +53,7 @@ async def create_or_get_direct_conversation(
         GetOrCreateDirectConversationCommand(
             user_id=user_id,
             peer_user_id=body.peer_user_id,
+            access_token=access_token,
         )
     )
     conversation = result.conversation

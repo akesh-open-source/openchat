@@ -10,3 +10,4 @@ class GetOrCreateDirectConversationCommand:
 
     user_id: UUID
     peer_user_id: UUID
+    access_token: str

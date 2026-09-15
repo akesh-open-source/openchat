@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import pytest
@@ -36,9 +37,17 @@ def membership_repository() -> InMemoryMembershipRepository:
 
 
 @pytest.fixture
+def users_client() -> MagicMock:
+    client = MagicMock()
+    client.user_exists = AsyncMock(return_value=True)
+    return client
+
+
+@pytest.fixture
 def client(
     conversation_repository: InMemoryConversationRepository,
     membership_repository: InMemoryMembershipRepository,
+    users_client: MagicMock,
     user_id: UUID,
 ) -> TestClient:
     app = FastAPI()
@@ -50,7 +59,9 @@ def client(
     app.dependency_overrides[deps.get_membership_repository] = (
         lambda: membership_repository
     )
+    app.dependency_overrides[deps.get_users_client] = lambda: users_client
     app.dependency_overrides[deps.get_current_user_id] = lambda: user_id
+    app.dependency_overrides[deps.get_access_token] = lambda: "test-token"
 
     with TestClient(app) as test_client:
         yield test_client
@@ -59,6 +70,7 @@ def client(
 def test_create_then_get_same_direct_conversation_id(
     client: TestClient,
     peer_user_id: UUID,
+    users_client: MagicMock,
 ) -> None:
     first = client.post(
         "/conversations/direct",
@@ -78,6 +90,20 @@ def test_create_then_get_same_direct_conversation_id(
     assert second.status_code == 200
     assert second.json()["id"] == conversation_id
     assert second.json()["created"] is False
+    assert users_client.user_exists.await_count >= 2
+
+
+def test_create_direct_rejects_unknown_peer(
+    client: TestClient,
+    peer_user_id: UUID,
+    users_client: MagicMock,
+) -> None:
+    users_client.user_exists = AsyncMock(return_value=False)
+    response = client.post(
+        "/conversations/direct",
+        json={"peer_user_id": str(peer_user_id)},
+    )
+    assert response.status_code == 404
 
 
 def test_create_direct_rejects_self_chat(
@@ -94,6 +120,7 @@ def test_create_direct_rejects_self_chat(
 def test_create_direct_requires_auth(
     conversation_repository: InMemoryConversationRepository,
     membership_repository: InMemoryMembershipRepository,
+    users_client: MagicMock,
     peer_user_id: UUID,
 ) -> None:
     app = FastAPI()
@@ -105,7 +132,8 @@ def test_create_direct_requires_auth(
     app.dependency_overrides[deps.get_membership_repository] = (
         lambda: membership_repository
     )
-    # Do not override get_current_user_id — missing Bearer → 401.
+    app.dependency_overrides[deps.get_users_client] = lambda: users_client
+    # Do not override auth deps — missing Bearer → 401.
 
     with TestClient(app) as test_client:
         response = test_client.post(
