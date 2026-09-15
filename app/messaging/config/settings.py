@@ -33,5 +33,9 @@ class Settings(BaseSettings):
     jwt_public_key: str = ""
     jwt_public_key_path: str = ""
 
+    # Users service (peer existence lookup over HTTP).
+    users_service_url: str = "http://localhost:8002"
+    users_http_timeout_seconds: float = 5.0
+
 
 settings = Settings()

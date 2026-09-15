@@ -28,3 +28,11 @@ class MembershipAlreadyExistsError(DomainError):
 
 class InvalidTokenError(DomainError):
     """Raised when an access token is missing, malformed, or expired."""
+
+
+class PeerNotFoundError(DomainError):
+    """Raised when peer_user_id has no profile in the users service."""
+
+
+class UsersUnavailableError(DomainError):
+    """Raised when the users service cannot be reached for peer lookup."""

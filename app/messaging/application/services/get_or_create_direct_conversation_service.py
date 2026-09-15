@@ -11,9 +11,14 @@ from app.messaging.application.ports.repositories.conversation_repository import
 from app.messaging.application.ports.repositories.membership_repository import (
     MembershipRepository,
 )
+from app.messaging.application.ports.users_client import UsersClient
 from app.messaging.domain.entities.conversation import Conversation
 from app.messaging.domain.entities.membership import Membership
-from app.messaging.domain.exceptions import ConversationAlreadyExistsError
+from app.messaging.domain.exceptions import (
+    ConversationAlreadyExistsError,
+    PeerNotFoundError,
+    SelfConversationError,
+)
 from app.messaging.domain.value_objects.membership_role import MembershipRole
 
 
@@ -27,17 +32,30 @@ class GetOrCreateDirectConversationResult:
 class GetOrCreateDirectConversationService:
     """Create a direct conversation or return the existing one for the pair.
 
-    Peer existence is not validated against the users service for MVP — the
-    gateway/client is trusted to pass a real peer_user_id (see API docs).
+    Peer existence is validated via HTTP lookup against the users service
+    (forward caller JWT). Do not trust client-supplied peer_user_id alone.
     """
 
     conversation_repository: ConversationRepository
     membership_repository: MembershipRepository
+    users_client: UsersClient
 
     async def execute(
         self,
         command: GetOrCreateDirectConversationCommand,
     ) -> GetOrCreateDirectConversationResult:
+        if command.user_id == command.peer_user_id:
+            raise SelfConversationError("Cannot create a conversation with yourself")
+
+        peer_exists = await self.users_client.user_exists(
+            user_id=command.peer_user_id,
+            access_token=command.access_token,
+        )
+        if not peer_exists:
+            raise PeerNotFoundError(
+                f"Peer user {command.peer_user_id} was not found"
+            )
+
         existing = await self.conversation_repository.get_direct_between(
             command.user_id,
             command.peer_user_id,
