@@ -2,17 +2,19 @@
 # Do not share databases across services (ADR-009).
 #
 # Env files:
-#   app/auth/.env    — postgres-auth + auth (see app/auth/.env.example)
-#   app/users/.env   — postgres-users + users (see app/users/.env.example)
-#   app/gateway/.env — gateway (see app/gateway/.env.example)
+#   app/auth/.env       — postgres-auth + auth (see app/auth/.env.example)
+#   app/users/.env      — postgres-users + users (see app/users/.env.example)
+#   app/messaging/.env  — postgres-messaging + messaging (see app/messaging/.env.example)
+#   app/gateway/.env    — gateway (see app/gateway/.env.example)
 # JWT keys:
 #   secrets/jwt/private.pem — auth only (see secrets/jwt/README.md)
 #   secrets/jwt/public.pem  — auth + gateway
 #
 # Networks:
-#   auth-internal  — postgres-auth ↔ auth-redis ↔ auth (DB/cache not on edge)
-#   users-internal — postgres-users ↔ users (DB not on edge)
-#   edge           — gateway ↔ auth ↔ users ↔ mailpit (and later other services)
+#   auth-internal       — postgres-auth ↔ auth-redis ↔ auth (DB/cache not on edge)
+#   users-internal      — postgres-users ↔ users (DB not on edge)
+#   messaging-internal  — postgres-messaging ↔ messaging (DB not on edge)
+#   edge                — gateway ↔ auth ↔ users ↔ messaging ↔ mailpit (and later other services)
 
 services:
   postgres-auth:
@@ -49,6 +51,21 @@ services:
       - postgres_users_data:/var/lib/postgresql/data
     networks:
       - users-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Internal only — not published to the host.
+
+  postgres-messaging:
+    image: postgres:16-alpine
+    env_file:
+      - app/messaging/.env
+    volumes:
+      - postgres_messaging_data:/var/lib/postgresql/data
+    networks:
+      - messaging-internal
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
@@ -131,6 +148,33 @@ services:
       retries: 12
       start_period: 15s
 
+  messaging:
+    build:
+      context: .
+      dockerfile: app/messaging/Dockerfile
+    env_file:
+      - app/messaging/.env
+    ports:
+      - "8003:8003"
+    networks:
+      - messaging-internal
+      - edge
+    depends_on:
+      postgres-messaging:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8003/health')",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
   gateway:
     build:
       context: .
@@ -155,8 +199,11 @@ networks:
     internal: true
   users-internal:
     internal: true
+  messaging-internal:
+    internal: true
   edge:
 
 volumes:
   postgres_auth_data:
   postgres_users_data:
+  postgres_messaging_data:
