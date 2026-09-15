@@ -7,6 +7,7 @@ from app.messaging.application.dto.conversation_list_cursor import ConversationL
 from app.messaging.domain.entities.conversation import Conversation
 from app.messaging.domain.entities.membership import Membership
 from app.messaging.domain.entities.message import Message
+from app.messaging.domain.exceptions import MessageAlreadyExistsError
 from app.messaging.domain.value_objects.membership_role import MembershipRole
 from app.messaging.domain.value_objects.user_pair import sorted_user_pair
 
@@ -129,6 +130,17 @@ class InMemoryMessageRepository:
         return latest
 
     async def save(self, message: Message) -> None:
+        for existing in self._by_id.values():
+            if existing.conversation_id != message.conversation_id:
+                continue
+            if existing.client_message_id == message.client_message_id:
+                raise MessageAlreadyExistsError(
+                    "Message already exists for this client_message_id"
+                )
+            if existing.sequence == message.sequence:
+                raise MessageAlreadyExistsError(
+                    "Message already exists for this sequence"
+                )
         self._by_id[message.id] = message
 
 

@@ -40,3 +40,7 @@ class UsersUnavailableError(DomainError):
 
 class InvalidCursorError(DomainError):
     """Raised when a pagination cursor is malformed."""
+
+
+class MessageAlreadyExistsError(DomainError):
+    """Raised when client_message_id or sequence uniqueness is violated."""
