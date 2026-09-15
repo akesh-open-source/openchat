@@ -39,3 +39,11 @@ class ConversationRepository(Protocol):
     async def save(self, conversation: Conversation) -> None:
         """Insert a new conversation (does not upsert)."""
         ...
+
+    async def allocate_next_sequence(self, conversation_id: UUID) -> int:
+        """Lock the conversation row, bump ``next_sequence``, return the assigned value.
+
+        This is the MVP ordering authority. Concurrent callers for the same
+        conversation must serialize on the row lock (Postgres ``FOR UPDATE``).
+        """
+        ...

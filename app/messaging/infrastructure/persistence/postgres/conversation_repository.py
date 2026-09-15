@@ -8,7 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.messaging.application.dto.conversation_list_cursor import ConversationListCursor
 from app.messaging.domain.entities.conversation import Conversation
-from app.messaging.domain.exceptions import ConversationAlreadyExistsError
+from app.messaging.domain.exceptions import (
+    ConversationAlreadyExistsError,
+    ConversationNotFoundError,
+)
 from app.messaging.domain.value_objects.user_pair import sorted_user_pair
 from app.messaging.infrastructure.persistence.postgres.mappers.conversation_mapper import (
     to_domain,
@@ -93,3 +96,21 @@ class PostgresConversationRepository:
                 f"Direct conversation already exists for pair "
                 f"{conversation.direct_user_a_id}/{conversation.direct_user_b_id}"
             ) from exc
+
+    async def allocate_next_sequence(self, conversation_id: UUID) -> int:
+        """Lock conversation row (FOR UPDATE), bump next_sequence, return it."""
+        stmt = (
+            select(ConversationModel)
+            .where(ConversationModel.id == conversation_id)
+            .with_for_update()
+        )
+        result = await self._session.execute(stmt)
+        model = result.scalar_one_or_none()
+        if model is None:
+            raise ConversationNotFoundError("Conversation not found")
+
+        conversation = to_domain(model)
+        sequence = conversation.allocate_next_sequence()
+        model.next_sequence = conversation.next_sequence
+        await self._session.flush()
+        return sequence
