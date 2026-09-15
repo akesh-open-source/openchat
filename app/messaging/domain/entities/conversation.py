@@ -45,3 +45,12 @@ class Conversation:
     @property
     def is_direct(self) -> bool:
         return self.type is ConversationType.DIRECT
+
+    def allocate_next_sequence(self) -> int:
+        """Bump and return the next message sequence for this conversation.
+
+        Callers that persist must hold a conversation row lock (MVP) or use an
+        equivalent ordering authority so concurrent allocators serialize.
+        """
+        self.next_sequence += 1
+        return self.next_sequence

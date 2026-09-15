@@ -7,16 +7,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.messaging.domain.entities.message import Message
-from app.messaging.domain.exceptions import DomainError
+from app.messaging.domain.exceptions import MessageAlreadyExistsError
 from app.messaging.infrastructure.persistence.postgres.mappers.message_mapper import (
     to_domain,
     to_model,
 )
 from app.messaging.infrastructure.persistence.postgres.models.message import MessageModel
-
-
-class MessageAlreadyExistsError(DomainError):
-    """Raised when client_message_id or sequence uniqueness is violated."""
 
 
 class PostgresMessageRepository:
