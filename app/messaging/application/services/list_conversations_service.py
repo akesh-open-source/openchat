@@ -8,7 +8,14 @@ from app.messaging.application.dto.conversation_summary import ConversationSumma
 from app.messaging.application.ports.repositories.conversation_repository import (
     ConversationRepository,
 )
-from app.messaging.domain.exceptions import DomainError, InvalidCursorError
+from app.messaging.application.ports.repositories.message_repository import (
+    MessageRepository,
+)
+from app.messaging.application.ports.users_client import UsersClient
+from app.messaging.application.services.conversation_summary_enricher import (
+    build_conversation_summaries,
+)
+from app.messaging.domain.exceptions import DomainError
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,6 +27,8 @@ class ListConversationsResult:
 @dataclass(slots=True)
 class ListConversationsService:
     conversation_repository: ConversationRepository
+    message_repository: MessageRepository
+    users_client: UsersClient
 
     async def execute(self, query: ListConversationsQuery) -> ListConversationsResult:
         if query.limit < 1 or query.limit > 100:
@@ -36,10 +45,13 @@ class ListConversationsService:
             cursor=cursor,
         )
         page = rows[: query.limit]
-        items = [
-            ConversationSummary.from_conversation(conversation, viewer_id=query.user_id)
-            for conversation in page
-        ]
+        items = await build_conversation_summaries(
+            conversations=page,
+            viewer_id=query.user_id,
+            access_token=query.access_token,
+            message_repository=self.message_repository,
+            users_client=self.users_client,
+        )
 
         next_cursor: str | None = None
         if len(rows) > query.limit:

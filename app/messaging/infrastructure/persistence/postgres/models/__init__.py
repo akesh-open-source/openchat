@@ -4,5 +4,6 @@ from app.messaging.infrastructure.persistence.postgres.models.conversation impor
 from app.messaging.infrastructure.persistence.postgres.models.membership import (
     MembershipModel,
 )
+from app.messaging.infrastructure.persistence.postgres.models.message import MessageModel
 
-__all__ = ["ConversationModel", "MembershipModel"]
+__all__ = ["ConversationModel", "MembershipModel", "MessageModel"]

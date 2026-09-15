@@ -15,6 +15,7 @@ def to_domain(model: ConversationModel) -> Conversation:
         direct_user_b_id=model.direct_user_b_id,
         created_at=model.created_at,
         updated_at=model.updated_at,
+        next_sequence=model.next_sequence,
     )
 
 
@@ -26,4 +27,5 @@ def to_model(conversation: Conversation) -> ConversationModel:
         direct_user_b_id=conversation.direct_user_b_id,
         created_at=conversation.created_at,
         updated_at=conversation.updated_at,
+        next_sequence=conversation.next_sequence,
     )

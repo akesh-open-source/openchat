@@ -19,6 +19,8 @@ class Conversation:
     # Sorted auth user ids for direct chats; both None for group.
     direct_user_a_id: UUID | None = None
     direct_user_b_id: UUID | None = None
+    # Monotonic sequence allocator for messages (bumped on send).
+    next_sequence: int = 0
 
     @classmethod
     def create_direct(
@@ -37,6 +39,7 @@ class Conversation:
             direct_user_b_id=user_b,
             created_at=now,
             updated_at=now,
+            next_sequence=0,
         )
 
     @property

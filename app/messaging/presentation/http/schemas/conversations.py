@@ -30,6 +30,8 @@ class ConversationResponse(BaseModel):
     type: str
     peer_user_id: UUID | None
     peer_display_name: str | None = None
+    last_message_preview: str | None = None
+    last_message_at: datetime | None = None
     last_activity_at: datetime
     created_at: datetime
     updated_at: datetime

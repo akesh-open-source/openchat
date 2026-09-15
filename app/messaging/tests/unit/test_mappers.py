@@ -31,8 +31,39 @@ def test_conversation_mapper_roundtrip() -> None:
     assert restored.type == conversation.type
     assert restored.direct_user_a_id == low
     assert restored.direct_user_b_id == high
+    assert restored.next_sequence == conversation.next_sequence
     assert restored.created_at == conversation.created_at
     assert restored.updated_at == conversation.updated_at
+
+
+def test_message_mapper_roundtrip() -> None:
+    from app.messaging.domain.entities.message import Message
+    from app.messaging.domain.value_objects.message_status import MessageStatus
+    from app.messaging.infrastructure.persistence.postgres.mappers.message_mapper import (
+        to_domain as message_to_domain,
+    )
+    from app.messaging.infrastructure.persistence.postgres.mappers.message_mapper import (
+        to_model as message_to_model,
+    )
+
+    message = Message.create(
+        conversation_id=uuid4(),
+        sender_id=uuid4(),
+        client_message_id="client-1",
+        sequence=3,
+        body="hi",
+    )
+    model = message_to_model(message)
+    restored = message_to_domain(model)
+
+    assert restored.id == message.id
+    assert restored.conversation_id == message.conversation_id
+    assert restored.sender_id == message.sender_id
+    assert restored.client_message_id == "client-1"
+    assert restored.sequence == 3
+    assert restored.body == "hi"
+    assert restored.status is MessageStatus.SENT
+    assert restored.created_at == message.created_at
 
 
 def test_membership_mapper_roundtrip() -> None:

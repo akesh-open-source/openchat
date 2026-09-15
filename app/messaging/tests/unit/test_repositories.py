@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 from app.messaging.application.dto.conversation_list_cursor import ConversationListCursor
 from app.messaging.domain.entities.conversation import Conversation
 from app.messaging.domain.entities.membership import Membership
+from app.messaging.domain.entities.message import Message
 from app.messaging.domain.value_objects.membership_role import MembershipRole
 from app.messaging.domain.value_objects.user_pair import sorted_user_pair
 
@@ -107,6 +108,30 @@ class InMemoryConversationRepository:
         self._by_id[conversation.id] = conversation
 
 
+class InMemoryMessageRepository:
+    """Fake MessageRepository for contract tests (no Postgres)."""
+
+    def __init__(self) -> None:
+        self._by_id: dict[UUID, Message] = {}
+
+    async def get_latest_by_conversation_ids(
+        self,
+        conversation_ids: list[UUID],
+    ) -> dict[UUID, Message]:
+        latest: dict[UUID, Message] = {}
+        wanted = set(conversation_ids)
+        for message in self._by_id.values():
+            if message.conversation_id not in wanted:
+                continue
+            current = latest.get(message.conversation_id)
+            if current is None or message.sequence > current.sequence:
+                latest[message.conversation_id] = message
+        return latest
+
+    async def save(self, message: Message) -> None:
+        self._by_id[message.id] = message
+
+
 def test_conversation_and_membership_repository_contract() -> None:
     async def _run() -> None:
         memberships = InMemoryMembershipRepository()
@@ -146,5 +171,25 @@ def test_conversation_and_membership_repository_contract() -> None:
         for_user = await conversations.list_for_user(user_a, limit=10)
         assert len(for_user) == 1
         assert for_user[0].id == conversation.id
+
+        messages = InMemoryMessageRepository()
+        older = Message.create(
+            conversation_id=conversation.id,
+            sender_id=user_a,
+            client_message_id="c1",
+            sequence=1,
+            body="first",
+        )
+        newer = Message.create(
+            conversation_id=conversation.id,
+            sender_id=user_b,
+            client_message_id="c2",
+            sequence=2,
+            body="second",
+        )
+        await messages.save(older)
+        await messages.save(newer)
+        latest = await messages.get_latest_by_conversation_ids([conversation.id])
+        assert latest[conversation.id].body == "second"
 
     asyncio.run(_run())
