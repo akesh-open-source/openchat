@@ -13,8 +13,14 @@ from app.messaging.application.ports.repositories.membership_repository import (
     MembershipRepository,
 )
 from app.messaging.application.ports.users_client import UsersClient
+from app.messaging.application.services.get_conversation_service import (
+    GetConversationService,
+)
 from app.messaging.application.services.get_or_create_direct_conversation_service import (
     GetOrCreateDirectConversationService,
+)
+from app.messaging.application.services.list_conversations_service import (
+    ListConversationsService,
 )
 from app.messaging.config.settings import settings
 from app.messaging.infrastructure.http.users_client import HttpxUsersClient
@@ -67,6 +73,31 @@ def get_get_or_create_direct_conversation_service(
         conversation_repository=conversation_repository,
         membership_repository=membership_repository,
         users_client=users_client,
+    )
+
+
+def get_list_conversations_service(
+    conversation_repository: Annotated[
+        ConversationRepository,
+        Depends(get_conversation_repository),
+    ],
+) -> ListConversationsService:
+    return ListConversationsService(conversation_repository=conversation_repository)
+
+
+def get_get_conversation_service(
+    conversation_repository: Annotated[
+        ConversationRepository,
+        Depends(get_conversation_repository),
+    ],
+    membership_repository: Annotated[
+        MembershipRepository,
+        Depends(get_membership_repository),
+    ],
+) -> GetConversationService:
+    return GetConversationService(
+        conversation_repository=conversation_repository,
+        membership_repository=membership_repository,
     )
 
 

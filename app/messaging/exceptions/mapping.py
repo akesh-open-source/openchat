@@ -5,6 +5,7 @@ from app.messaging.domain.exceptions import (
     ConversationNotFoundError,
     DomainError,
     InvalidConversationTypeError,
+    InvalidCursorError,
     InvalidTokenError,
     MembershipAlreadyExistsError,
     MembershipNotFoundError,
@@ -16,6 +17,7 @@ from app.messaging.domain.exceptions import (
 EXCEPTION_STATUS_MAP: dict[type[Exception], int] = {
     SelfConversationError: status.HTTP_400_BAD_REQUEST,
     InvalidConversationTypeError: status.HTTP_400_BAD_REQUEST,
+    InvalidCursorError: status.HTTP_400_BAD_REQUEST,
     ConversationAlreadyExistsError: status.HTTP_409_CONFLICT,
     ConversationNotFoundError: status.HTTP_404_NOT_FOUND,
     MembershipAlreadyExistsError: status.HTTP_409_CONFLICT,
