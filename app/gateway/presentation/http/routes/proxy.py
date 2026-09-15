@@ -127,3 +127,84 @@ async def proxy_users(
         headers=_filter_headers(dict(upstream.headers)),
         media_type=upstream.headers.get("content-type"),
     )
+
+
+async def _proxy_messaging(
+    *,
+    request: Request,
+    client: AsyncClient,
+    upstream_path: str,
+) -> Response:
+    # All messaging routes require a valid access token at the edge.
+    get_current_user_id(request)
+
+    upstream_url = (
+        f"{settings.messaging_service_url.rstrip('/')}/{upstream_path.lstrip('/')}"
+    )
+    body = await request.body()
+    headers = _filter_headers(dict(request.headers))
+
+    try:
+        upstream = await client.request(
+            method=request.method,
+            url=upstream_url,
+            content=body,
+            headers=headers,
+            params=request.query_params,
+        )
+    except RequestError as exc:
+        logger.warning(
+            "Messaging upstream request failed path=%s error=%s",
+            upstream_path,
+            exc,
+        )
+        raise UpstreamUnavailableError("messaging") from exc
+
+    return Response(
+        content=upstream.content,
+        status_code=upstream.status_code,
+        headers=_filter_headers(dict(upstream.headers)),
+        media_type=upstream.headers.get("content-type"),
+    )
+
+
+@router.api_route(
+    "/conversations",
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+)
+@router.api_route(
+    "/conversations/{path:path}",
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+)
+async def proxy_conversations(
+    request: Request,
+    client: Annotated[AsyncClient, Depends(get_upstream_client)],
+) -> Response:
+    remainder = request.url.path[len("/conversations") :].lstrip("/")
+    upstream_path = f"conversations/{remainder}" if remainder else "conversations"
+    return await _proxy_messaging(
+        request=request,
+        client=client,
+        upstream_path=upstream_path,
+    )
+
+
+@router.api_route(
+    "/messages",
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+)
+@router.api_route(
+    "/messages/{path:path}",
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+)
+async def proxy_messages(
+    request: Request,
+    client: Annotated[AsyncClient, Depends(get_upstream_client)],
+) -> Response:
+    remainder = request.url.path[len("/messages") :].lstrip("/")
+    upstream_path = f"messages/{remainder}" if remainder else "messages"
+    return await _proxy_messaging(
+        request=request,
+        client=client,
+        upstream_path=upstream_path,
+    )

@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     # Upstream services (edge routing only — no business DB here).
     auth_service_url: str = "http://localhost:8001"
     users_service_url: str = "http://localhost:8002"
+    messaging_service_url: str = "http://localhost:8003"
 
     # JWT verify only — public key must match auth's signing key pair.
     jwt_algorithm: str = "RS256"

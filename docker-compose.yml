@@ -193,6 +193,8 @@ services:
         condition: service_healthy
       users:
         condition: service_healthy
+      messaging:
+        condition: service_healthy
 
 networks:
   auth-internal:
