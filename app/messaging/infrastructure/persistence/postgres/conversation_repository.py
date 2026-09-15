@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.messaging.application.dto.conversation_list_cursor import ConversationListCursor
 from app.messaging.domain.entities.conversation import Conversation
 from app.messaging.domain.exceptions import ConversationAlreadyExistsError
 from app.messaging.domain.value_objects.user_pair import sorted_user_pair
@@ -15,6 +16,9 @@ from app.messaging.infrastructure.persistence.postgres.mappers.conversation_mapp
 )
 from app.messaging.infrastructure.persistence.postgres.models.conversation import (
     ConversationModel,
+)
+from app.messaging.infrastructure.persistence.postgres.models.membership import (
+    MembershipModel,
 )
 
 
@@ -42,6 +46,40 @@ class PostgresConversationRepository:
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
         return to_domain(model) if model is not None else None
+
+    async def list_for_user(
+        self,
+        user_id: UUID,
+        *,
+        limit: int,
+        cursor: ConversationListCursor | None = None,
+    ) -> list[Conversation]:
+        stmt = (
+            select(ConversationModel)
+            .join(
+                MembershipModel,
+                MembershipModel.conversation_id == ConversationModel.id,
+            )
+            .where(MembershipModel.user_id == user_id)
+            .order_by(
+                ConversationModel.updated_at.desc(),
+                ConversationModel.id.desc(),
+            )
+            .limit(limit)
+        )
+        if cursor is not None:
+            stmt = stmt.where(
+                or_(
+                    ConversationModel.updated_at < cursor.updated_at,
+                    and_(
+                        ConversationModel.updated_at == cursor.updated_at,
+                        ConversationModel.id < cursor.id,
+                    ),
+                )
+            )
+
+        result = await self._session.execute(stmt)
+        return [to_domain(model) for model in result.scalars().all()]
 
     async def save(self, conversation: Conversation) -> None:
         # Nested transaction so a unique-pair conflict can be handled and

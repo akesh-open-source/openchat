@@ -21,3 +21,22 @@ class DirectConversationResponse(BaseModel):
     created: bool
     created_at: datetime
     updated_at: datetime
+
+
+class ConversationResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: UUID
+    type: str
+    peer_user_id: UUID | None
+    peer_display_name: str | None = None
+    last_activity_at: datetime
+    created_at: datetime
+    updated_at: datetime
+
+
+class ConversationListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[ConversationResponse]
+    next_cursor: str | None = None

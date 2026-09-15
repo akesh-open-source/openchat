@@ -60,3 +60,64 @@ users over HTTP (`GET /users/lookup?user_id=…`) with the caller's Bearer token
 
 Clients may still call `GET /users/lookup` first for UX (email → `user_id`), but
 messaging re-checks on create.
+
+## `GET /conversations`
+
+List conversations the **caller is a member of** only (newest `updated_at` first).
+
+### Query
+
+| Param | Default | Notes |
+|---|---|---|
+| `limit` | `20` | 1–100 |
+| `cursor` | omitted | Opaque keyset cursor from a previous `next_cursor` |
+
+### Response `200`
+
+```json
+{
+  "items": [
+    {
+      "id": "<uuid>",
+      "type": "direct",
+      "peer_user_id": "<uuid>",
+      "peer_display_name": null,
+      "last_activity_at": "...",
+      "created_at": "...",
+      "updated_at": "..."
+    }
+  ],
+  "next_cursor": "<opaque>|null"
+}
+```
+
+- `peer_display_name` is **stubbed `null` for MVP** (no batch users lookup on list).
+- `last_activity_at` currently mirrors `updated_at` until messages bump activity.
+- Cursor is keyset on `(updated_at DESC, id DESC)`.
+
+### Errors
+
+| Status | When |
+|---|---|
+| `400` | Malformed `cursor` |
+| `401` | Missing/invalid Bearer token |
+| `422` | Invalid `limit` |
+
+## `GET /conversations/{id}`
+
+Return one conversation **only if** the caller is a member.
+
+### Authz
+
+Non-members and unknown ids both return **`404`** (do not leak existence).
+
+### Response `200`
+
+Same item shape as list entries.
+
+### Errors
+
+| Status | When |
+|---|---|
+| `401` | Missing/invalid Bearer token |
+| `404` | Missing conversation or caller is not a member |

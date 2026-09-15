@@ -36,3 +36,7 @@ class PeerNotFoundError(DomainError):
 
 class UsersUnavailableError(DomainError):
     """Raised when the users service cannot be reached for peer lookup."""
+
+
+class InvalidCursorError(DomainError):
+    """Raised when a pagination cursor is malformed."""
