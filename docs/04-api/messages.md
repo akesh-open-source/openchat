@@ -9,19 +9,6 @@ is also proxied for future routes.
 
 Messaging re-verifies the access JWT with the auth public key (`sub` = caller).
 
-## Membership authz (central guard)
-
-Conversation-scoped **send**, **history** (`GET .../messages`), and **get
-conversation** all go through one server-side membership guard
-(`ConversationMembershipGuard`):
-
-- Looks up membership for `(conversation_id, caller)` in messaging Postgres.
-- If the row is missing → **`404 Conversation not found`** (same for a
-  non-existent conversation id and for a real conversation the caller is not
-  in). Never **`403`** (that would confirm existence).
-- Authorization is **not** based on client-supplied flags or roles in the
-  request body.
-
 ## Persistence (schema)
 
 | Field | Role |
@@ -98,7 +85,6 @@ On idempotent retry, the body matches the first successful send and
 
 ### Authz
 
-Uses the [central membership guard](#membership-authz-central-guard).
 Non-members and unknown conversation ids both return **`404`**.
 
 ---
@@ -165,8 +151,7 @@ Malformed `cursor` → **`400`**.
 
 ### Authz
 
-Uses the [central membership guard](#membership-authz-central-guard).
-Outsiders see **`404`**, not `403`.
+Same as send: outsiders see **`404`**, not `403`.
 
 ---
 

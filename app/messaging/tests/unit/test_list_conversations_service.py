@@ -10,9 +10,6 @@ import pytest
 from app.messaging.application.commands.get_conversation import GetConversationQuery
 from app.messaging.application.commands.list_conversations import ListConversationsQuery
 from app.messaging.application.dto.conversation_list_cursor import ConversationListCursor
-from app.messaging.application.services.conversation_membership_guard import (
-    ConversationMembershipGuard,
-)
 from app.messaging.application.services.get_conversation_service import (
     GetConversationService,
 )
@@ -54,9 +51,7 @@ def _get_service(
 ) -> GetConversationService:
     return GetConversationService(
         conversation_repository=conversations,
-        membership_guard=ConversationMembershipGuard(
-            membership_repository=memberships,
-        ),
+        membership_repository=memberships,
         message_repository=messages,
         users_client=users_client,
     )
