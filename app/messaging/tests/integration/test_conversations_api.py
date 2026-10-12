@@ -403,3 +403,104 @@ def test_send_message_outsider_gets_404(
             json={"client_message_id": "nope", "body": "secret"},
         )
     assert response.status_code == 404
+
+
+def test_list_messages_cursor_pages_contiguous_by_sequence(
+    client: TestClient,
+    peer_user_id: UUID,
+) -> None:
+    created = client.post(
+        "/conversations/direct",
+        json={"peer_user_id": str(peer_user_id)},
+    )
+    conversation_id = created.json()["id"]
+    for i in range(1, 6):
+        sent = client.post(
+            f"/conversations/{conversation_id}/messages",
+            json={"client_message_id": f"m{i}", "body": f"body-{i}"},
+        )
+        assert sent.status_code == 200
+        assert sent.json()["sequence"] == i
+
+    first = client.get(
+        f"/conversations/{conversation_id}/messages",
+        params={"limit": 2},
+    )
+    assert first.status_code == 200
+    first_body = first.json()
+    assert [item["sequence"] for item in first_body["items"]] == [1, 2]
+    assert first_body["next_cursor"] is not None
+
+    second = client.get(
+        f"/conversations/{conversation_id}/messages",
+        params={"limit": 2, "cursor": first_body["next_cursor"]},
+    )
+    assert second.status_code == 200
+    second_body = second.json()
+    assert [item["sequence"] for item in second_body["items"]] == [3, 4]
+    assert second_body["next_cursor"] is not None
+
+    third = client.get(
+        f"/conversations/{conversation_id}/messages",
+        params={"limit": 2, "cursor": second_body["next_cursor"]},
+    )
+    assert third.status_code == 200
+    third_body = third.json()
+    assert [item["sequence"] for item in third_body["items"]] == [5]
+    assert third_body["next_cursor"] is None
+
+
+def test_list_messages_bad_cursor_returns_400(
+    client: TestClient,
+    peer_user_id: UUID,
+) -> None:
+    created = client.post(
+        "/conversations/direct",
+        json={"peer_user_id": str(peer_user_id)},
+    )
+    conversation_id = created.json()["id"]
+    response = client.get(
+        f"/conversations/{conversation_id}/messages",
+        params={"cursor": "%%%not-valid%%%"},
+    )
+    assert response.status_code == 400
+
+
+def test_list_messages_outsider_gets_404(
+    conversation_repository: InMemoryConversationRepository,
+    membership_repository: InMemoryMembershipRepository,
+    message_repository: InMemoryMessageRepository,
+    users_client: MagicMock,
+    user_id: UUID,
+    peer_user_id: UUID,
+) -> None:
+    app = FastAPI()
+    register_exception_handlers(app)
+    app.include_router(router)
+    app.dependency_overrides[deps.get_conversation_repository] = (
+        lambda: conversation_repository
+    )
+    app.dependency_overrides[deps.get_membership_repository] = (
+        lambda: membership_repository
+    )
+    app.dependency_overrides[deps.get_message_repository] = lambda: message_repository
+    app.dependency_overrides[deps.get_users_client] = lambda: users_client
+    app.dependency_overrides[deps.get_current_user_id] = lambda: user_id
+    app.dependency_overrides[deps.get_access_token] = lambda: "test-token"
+
+    with TestClient(app) as owner_client:
+        created = owner_client.post(
+            "/conversations/direct",
+            json={"peer_user_id": str(peer_user_id)},
+        )
+        conversation_id = created.json()["id"]
+        owner_client.post(
+            f"/conversations/{conversation_id}/messages",
+            json={"client_message_id": "secret", "body": "hi"},
+        )
+
+    stranger_id = uuid4()
+    app.dependency_overrides[deps.get_current_user_id] = lambda: stranger_id
+    with TestClient(app) as stranger_client:
+        response = stranger_client.get(f"/conversations/{conversation_id}/messages")
+    assert response.status_code == 404

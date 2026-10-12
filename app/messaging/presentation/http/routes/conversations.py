@@ -9,6 +9,7 @@ from app.messaging.application.commands.get_or_create_direct_conversation import
     GetOrCreateDirectConversationCommand,
 )
 from app.messaging.application.commands.list_conversations import ListConversationsQuery
+from app.messaging.application.commands.list_messages import ListMessagesQuery
 from app.messaging.application.commands.send_message import SendMessageCommand
 from app.messaging.application.dto.conversation_summary import ConversationSummary
 from app.messaging.application.services.get_conversation_service import (
@@ -20,6 +21,7 @@ from app.messaging.application.services.get_or_create_direct_conversation_servic
 from app.messaging.application.services.list_conversations_service import (
     ListConversationsService,
 )
+from app.messaging.application.services.list_messages_service import ListMessagesService
 from app.messaging.application.services.send_message_service import SendMessageService
 from app.messaging.domain.entities.conversation import Conversation
 from app.messaging.domain.entities.message import Message
@@ -29,6 +31,7 @@ from app.messaging.presentation.http.dependencies import (
     get_get_conversation_service,
     get_get_or_create_direct_conversation_service,
     get_list_conversations_service,
+    get_list_messages_service,
     get_send_message_service,
 )
 from app.messaging.presentation.http.schemas.conversations import (
@@ -38,6 +41,8 @@ from app.messaging.presentation.http.schemas.conversations import (
     DirectConversationResponse,
 )
 from app.messaging.presentation.http.schemas.messages import (
+    MessageListItemResponse,
+    MessageListResponse,
     MessageResponse,
     SendMessageRequest,
 )
@@ -162,6 +167,46 @@ def _to_message_response(message: Message, *, created: bool) -> MessageResponse:
         status=message.status.value,
         created_at=message.created_at,
         created=created,
+    )
+
+
+def _to_message_list_item(message: Message) -> MessageListItemResponse:
+    return MessageListItemResponse(
+        id=message.id,
+        conversation_id=message.conversation_id,
+        sender_id=message.sender_id,
+        client_message_id=message.client_message_id,
+        sequence=message.sequence,
+        body=message.body,
+        status=message.status.value,
+        created_at=message.created_at,
+    )
+
+
+@router.get(
+    "/{conversation_id}/messages",
+    response_model=MessageListResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def list_messages(
+    conversation_id: UUID,
+    user_id: UUID = Depends(get_current_user_id),
+    limit: int = Query(default=50, ge=1, le=100),
+    cursor: str | None = Query(default=None),
+    service: ListMessagesService = Depends(get_list_messages_service),
+) -> MessageListResponse:
+    """List messages in sequence order; requires membership (else 404)."""
+    result = await service.execute(
+        ListMessagesQuery(
+            user_id=user_id,
+            conversation_id=conversation_id,
+            limit=limit,
+            cursor=cursor,
+        ),
+    )
+    return MessageListResponse(
+        items=[_to_message_list_item(message) for message in result.items],
+        next_cursor=result.next_cursor,
     )
 
 

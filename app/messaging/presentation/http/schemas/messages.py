@@ -25,3 +25,23 @@ class MessageResponse(BaseModel):
     status: str
     created_at: datetime
     created: bool
+
+
+class MessageListItemResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: UUID
+    conversation_id: UUID
+    sender_id: UUID
+    client_message_id: str
+    sequence: int
+    body: str
+    status: str
+    created_at: datetime
+
+
+class MessageListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[MessageListItemResponse]
+    next_cursor: str | None = None

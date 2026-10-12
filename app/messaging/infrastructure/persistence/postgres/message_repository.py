@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.messaging.application.dto.message_list_cursor import MessageListCursor
 from app.messaging.domain.entities.conversation import Conversation
 from app.messaging.domain.entities.message import Message
 from app.messaging.domain.exceptions import (
@@ -66,6 +67,22 @@ class PostgresMessageRepository:
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
         return to_domain(model) if model is not None else None
+
+    async def list_by_conversation(
+        self,
+        conversation_id: UUID,
+        *,
+        limit: int,
+        cursor: MessageListCursor | None = None,
+    ) -> list[Message]:
+        stmt = select(MessageModel).where(
+            MessageModel.conversation_id == conversation_id,
+        )
+        if cursor is not None:
+            stmt = stmt.where(MessageModel.sequence > cursor.sequence)
+        stmt = stmt.order_by(MessageModel.sequence.asc()).limit(limit)
+        result = await self._session.execute(stmt)
+        return [to_domain(model) for model in result.scalars().all()]
 
     async def create_with_next_sequence(
         self,
