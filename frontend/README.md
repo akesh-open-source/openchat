@@ -12,7 +12,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`. Routes: `/` (inbox placeholder), `/login`, `/register`.
+Open `http://localhost:5173`. Routes: `/`, `/login`, `/register`, `/forgot-password`, `/reset-password`.
 
 | Env | Default | Meaning |
 | --- | --- | --- |
@@ -45,6 +45,6 @@ and `VITE_API_BASE_URL`. Child pages use `useOpenChatApi()` (see inbox health pi
 
 ## Next slices
 
-See [ROADMAP.md](./ROADMAP.md): F1.3 password reset → rest of F1 → F2 inbox/profile.
+See [ROADMAP.md](./ROADMAP.md): F1.4 change password → rest of F1 → F2 inbox/profile.
 
 > `frontend/` is tracked; `node_modules/`, `dist/`, and `.env` stay ignored via `frontend/.gitignore`.

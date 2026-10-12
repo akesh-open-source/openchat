@@ -38,6 +38,9 @@ export function useAuth() {
     loginState: login,
     logoutState: logout,
     registerState: { initiateRegister, completeRegister },
+    forgotPasswordState: forgotPassword,
+    resetPasswordState: resetPassword,
+    changePasswordState: changePassword,
   };
 }
 

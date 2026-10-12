@@ -87,6 +87,7 @@ export function LoginPage() {
       </form>
 
       <nav className="nav">
+        <Link to="/forgot-password">Forgot password</Link>
         <Link to="/register">Register</Link>
         <Link to="/">Inbox</Link>
       </nav>

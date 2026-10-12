@@ -45,7 +45,7 @@ Rules:
 | --- | --- | --- | --- | --- | --- |
 | 1 | Login | `feat/frontend-login` | `feat(frontend): add login page with device_id` | email/password/`device_id` → store tokens | [x] |
 | 2 | Register | `feat/frontend-register` | `feat(frontend): add two-step register flow` | initiate → complete (token from email/debug) | [x] |
-| 3 | Forgot / reset password | `feat/frontend-password-reset` | `feat(frontend): add forgot and reset password pages` | public flows | [ ] |
+| 3 | Forgot / reset password | `feat/frontend-password-reset` | `feat(frontend): add forgot and reset password pages` | public flows | [x] |
 | 4 | Change password | `feat/frontend-change-password` | `feat(frontend): add authenticated change-password form` | Bearer required | [ ] |
 | 5 | Sessions / devices | `feat/frontend-sessions-devices` | `feat(frontend): list devices and revoke sessions` | list + revoke session | [ ] |
 | 6 | Auth gate | `feat/frontend-auth-gate` | `feat(frontend): protect routes with auth gate` | redirect unauthenticated users | [ ] |
