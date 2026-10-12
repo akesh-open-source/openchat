@@ -47,7 +47,7 @@ Rules:
 | 2 | Register | `feat/frontend-register` | `feat(frontend): add two-step register flow` | initiate → complete (token from email/debug) | [x] |
 | 3 | Forgot / reset password | `feat/frontend-password-reset` | `feat(frontend): add forgot and reset password pages` | public flows | [x] |
 | 4 | Change password | `feat/frontend-change-password` | `feat(frontend): add authenticated change-password form` | Bearer required | [x] |
-| 5 | Sessions / devices | `feat/frontend-sessions-devices` | `feat(frontend): list devices and revoke sessions` | list + revoke session | [ ] |
+| 5 | Sessions / devices | `feat/frontend-sessions-devices` | `feat(frontend): list devices and revoke sessions` | list + revoke session | [x] |
 | 6 | Auth gate | `feat/frontend-auth-gate` | `feat(frontend): protect routes with auth gate` | redirect unauthenticated users | [ ] |
 
 ---

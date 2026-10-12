@@ -6,6 +6,7 @@ import { InboxPage } from "./pages/InboxPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
+import { SessionsPage } from "./pages/SessionsPage";
 
 export function App() {
   return (
@@ -25,6 +26,14 @@ export function App() {
           element={
             <RequireAuth>
               <ChangePasswordPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/sessions"
+          element={
+            <RequireAuth>
+              <SessionsPage />
             </RequireAuth>
           }
         />
