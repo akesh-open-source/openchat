@@ -8,6 +8,9 @@ import pytest
 from app.messaging.application.commands.list_messages import ListMessagesQuery
 from app.messaging.application.commands.send_message import SendMessageCommand
 from app.messaging.application.dto.message_list_cursor import MessageListCursor
+from app.messaging.application.services.conversation_membership_guard import (
+    ConversationMembershipGuard,
+)
 from app.messaging.application.services.list_messages_service import ListMessagesService
 from app.messaging.application.services.send_message_service import SendMessageService
 from app.messaging.domain.entities.conversation import Conversation
@@ -55,8 +58,9 @@ async def _seed_with_messages(count: int) -> tuple[
             ),
         ]
     )
+    guard = ConversationMembershipGuard(membership_repository=memberships)
     send = SendMessageService(
-        membership_repository=memberships,
+        membership_guard=guard,
         message_repository=messages,
     )
     for i in range(1, count + 1):
@@ -69,7 +73,7 @@ async def _seed_with_messages(count: int) -> tuple[
             )
         )
     list_service = ListMessagesService(
-        membership_repository=memberships,
+        membership_guard=guard,
         message_repository=messages,
     )
     return list_service, conversation, user_a

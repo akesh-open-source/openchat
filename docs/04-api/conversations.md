@@ -118,7 +118,9 @@ Return one conversation **only if** the caller is a member.
 
 ### Authz
 
-Non-members and unknown ids both return **`404`** (do not leak existence).
+Uses the same central membership guard as message send/history (see
+[messages.md](./messages.md#membership-authz-central-guard)). Non-members and
+unknown ids both return **`404`** (never `403`; do not leak existence).
 
 ### Response `200`
 
