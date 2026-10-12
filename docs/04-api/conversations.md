@@ -5,7 +5,8 @@ A Bearer access token is required on every path.
 
 The gateway proxies `/conversations` and `/conversations/{path}` to the
 messaging service (`GATEWAY_MESSAGING_SERVICE_URL`). Nested message routes under
-a conversation (e.g. `/conversations/{id}/messages`) go through this same proxy.
+a conversation (e.g. `POST /conversations/{id}/messages`) go through this same
+proxy — see [messages.md](./messages.md).
 
 Messaging re-verifies the access JWT with the auth public key (`sub` = caller).
 

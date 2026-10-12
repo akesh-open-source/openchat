@@ -25,6 +25,8 @@ from app.messaging.application.services.get_or_create_direct_conversation_servic
 from app.messaging.application.services.list_conversations_service import (
     ListConversationsService,
 )
+from app.messaging.application.services.send_message_service import SendMessageService
+
 from app.messaging.config.settings import settings
 from app.messaging.infrastructure.http.users_client import HttpxUsersClient
 from app.messaging.infrastructure.persistence.postgres.conversation_repository import (
@@ -126,6 +128,22 @@ def get_get_conversation_service(
         membership_repository=membership_repository,
         message_repository=message_repository,
         users_client=users_client,
+    )
+
+
+def get_send_message_service(
+    membership_repository: Annotated[
+        MembershipRepository,
+        Depends(get_membership_repository),
+    ],
+    message_repository: Annotated[
+        MessageRepository,
+        Depends(get_message_repository),
+    ],
+) -> SendMessageService:
+    return SendMessageService(
+        membership_repository=membership_repository,
+        message_repository=message_repository,
     )
 
 

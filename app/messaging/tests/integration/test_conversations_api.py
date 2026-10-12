@@ -42,8 +42,10 @@ def conversation_repository(
 
 
 @pytest.fixture
-def message_repository() -> InMemoryMessageRepository:
-    return InMemoryMessageRepository()
+def message_repository(
+    conversation_repository: InMemoryConversationRepository,
+) -> InMemoryMessageRepository:
+    return InMemoryMessageRepository(conversation_repository)
 
 
 @pytest.fixture
@@ -301,3 +303,103 @@ def test_list_conversations_cursor_pagination(
         item["id"] for item in second.json()["items"]
     }
     assert seen == set(ids)
+
+
+def test_send_message_happy_path_assigns_server_sequence(
+    client: TestClient,
+    peer_user_id: UUID,
+) -> None:
+    created = client.post(
+        "/conversations/direct",
+        json={"peer_user_id": str(peer_user_id)},
+    )
+    assert created.status_code == 200
+    conversation_id = created.json()["id"]
+
+    response = client.post(
+        f"/conversations/{conversation_id}/messages",
+        json={"client_message_id": "phone-1", "body": "hello"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["conversation_id"] == conversation_id
+    assert body["client_message_id"] == "phone-1"
+    assert body["body"] == "hello"
+    assert body["sequence"] == 1
+    assert body["status"] == "SENT"
+    assert body["created"] is True
+
+
+def test_send_message_retry_same_client_message_id_returns_original(
+    client: TestClient,
+    peer_user_id: UUID,
+) -> None:
+    created = client.post(
+        "/conversations/direct",
+        json={"peer_user_id": str(peer_user_id)},
+    )
+    conversation_id = created.json()["id"]
+
+    first = client.post(
+        f"/conversations/{conversation_id}/messages",
+        json={"client_message_id": "retry-me", "body": "once"},
+    )
+    assert first.status_code == 200
+    first_body = first.json()
+
+    second = client.post(
+        f"/conversations/{conversation_id}/messages",
+        json={"client_message_id": "retry-me", "body": "once"},
+    )
+    assert second.status_code == 200
+    second_body = second.json()
+    assert second_body["id"] == first_body["id"]
+    assert second_body["sequence"] == first_body["sequence"]
+    assert second_body["created"] is False
+
+    third = client.post(
+        f"/conversations/{conversation_id}/messages",
+        json={"client_message_id": "other", "body": "two"},
+    )
+    assert third.status_code == 200
+    assert third.json()["sequence"] == 2
+
+
+def test_send_message_outsider_gets_404(
+    conversation_repository: InMemoryConversationRepository,
+    membership_repository: InMemoryMembershipRepository,
+    message_repository: InMemoryMessageRepository,
+    users_client: MagicMock,
+    user_id: UUID,
+    peer_user_id: UUID,
+) -> None:
+    app = FastAPI()
+    register_exception_handlers(app)
+    app.include_router(router)
+    app.dependency_overrides[deps.get_conversation_repository] = (
+        lambda: conversation_repository
+    )
+    app.dependency_overrides[deps.get_membership_repository] = (
+        lambda: membership_repository
+    )
+    app.dependency_overrides[deps.get_message_repository] = lambda: message_repository
+    app.dependency_overrides[deps.get_users_client] = lambda: users_client
+    app.dependency_overrides[deps.get_current_user_id] = lambda: user_id
+    app.dependency_overrides[deps.get_access_token] = lambda: "test-token"
+
+    with TestClient(app) as owner_client:
+        created = owner_client.post(
+            "/conversations/direct",
+            json={"peer_user_id": str(peer_user_id)},
+        )
+        assert created.status_code == 200
+        conversation_id = created.json()["id"]
+
+    stranger_id = uuid4()
+    app.dependency_overrides[deps.get_current_user_id] = lambda: stranger_id
+    with TestClient(app) as stranger_client:
+        response = stranger_client.post(
+            f"/conversations/{conversation_id}/messages",
+            json={"client_message_id": "nope", "body": "secret"},
+        )
+    assert response.status_code == 404
