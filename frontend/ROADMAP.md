@@ -43,7 +43,7 @@ Rules:
 
 | # | Slice | Branch | Commit message | Steps | Done |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Login | `feat/frontend-login` | `feat(frontend): add login page with device_id` | email/password/`device_id` → store tokens | [ ] |
+| 1 | Login | `feat/frontend-login` | `feat(frontend): add login page with device_id` | email/password/`device_id` → store tokens | [x] |
 | 2 | Register | `feat/frontend-register` | `feat(frontend): add two-step register flow` | initiate → complete (token from email/debug) | [ ] |
 | 3 | Forgot / reset password | `feat/frontend-password-reset` | `feat(frontend): add forgot and reset password pages` | public flows | [ ] |
 | 4 | Change password | `feat/frontend-change-password` | `feat(frontend): add authenticated change-password form` | Bearer required | [ ] |
