@@ -38,8 +38,13 @@ frontend/
 - `npm run build` — typecheck + production bundle
 - `npm run preview` — serve `dist/`
 
+## Provider
+
+`OpenChatApiProvider` wraps the app in `src/main.tsx` with `LocalStorageTokenStore`
+and `VITE_API_BASE_URL`. Child pages use `useOpenChatApi()` (see inbox health ping).
+
 ## Next slices
 
-See [ROADMAP.md](./ROADMAP.md): F0.2 (track in git) → F0.3 (wire `OpenChatApiProvider`) → F1 auth UI.
+See [ROADMAP.md](./ROADMAP.md): F1 auth UI → F2 inbox/profile.
 
 > `frontend/` is tracked; `node_modules/`, `dist/`, and `.env` stay ignored via `frontend/.gitignore`.

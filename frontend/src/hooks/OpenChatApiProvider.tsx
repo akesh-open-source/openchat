@@ -4,12 +4,13 @@ import {
   LocalStorageTokenStore,
   type OpenChatApi,
 } from "../api";
+import { API_BASE_URL } from "../config";
 
 const OpenChatApiContext = createContext<OpenChatApi | null>(null);
 
 export interface OpenChatApiProviderProps {
   children: ReactNode;
-  /** Defaults to a gateway client at http://localhost:8000 with localStorage tokens. */
+  /** Defaults to VITE_API_BASE_URL (or http://localhost:8000) with localStorage tokens. */
   api?: OpenChatApi;
   baseUrl?: string;
 }
@@ -23,7 +24,7 @@ export function OpenChatApiProvider({
     () =>
       api ??
       createOpenChatApi({
-        baseUrl: baseUrl ?? "http://localhost:8000",
+        baseUrl: baseUrl ?? API_BASE_URL,
         tokenStore: new LocalStorageTokenStore(),
       }),
     [api, baseUrl],
