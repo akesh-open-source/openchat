@@ -1,14 +1,30 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../hooks";
 import { formatApiDetail } from "../lib/apiError";
 import { getOrCreateDeviceId } from "../lib/deviceId";
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { login, loginState } = useAuth();
   const deviceId = useMemo(() => getOrCreateDeviceId(), []);
+
+  const notice =
+    location.state &&
+    typeof location.state === "object" &&
+    "notice" in location.state &&
+    typeof (location.state as { notice?: unknown }).notice === "string"
+      ? (location.state as { notice: string }).notice
+      : null;
+  const from =
+    location.state &&
+    typeof location.state === "object" &&
+    "from" in location.state &&
+    typeof (location.state as { from?: unknown }).from === "string"
+      ? (location.state as { from: string }).from
+      : "/";
 
   const [email, setEmail] = useState(() => searchParams.get("email") ?? "");
   const [password, setPassword] = useState("");
@@ -25,7 +41,7 @@ export function LoginPage() {
         device_id: deviceId,
         device_name: deviceName.trim() || null,
       });
-      navigate("/", { replace: true });
+      navigate(from || "/", { replace: true });
     } catch (caught) {
       setFormError(formatApiDetail(caught));
     }
@@ -37,6 +53,7 @@ export function LoginPage() {
     <main className="page">
       <h1>Login</h1>
       <p className="muted">Sign in via the gateway. Tokens go to LocalStorageTokenStore.</p>
+      {notice != null && <p className="success">{notice}</p>}
 
       <form className="form" onSubmit={(e) => void onSubmit(e)}>
         <label className="field">
