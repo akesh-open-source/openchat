@@ -69,7 +69,10 @@ export function InboxPage() {
 
       <nav className="nav">
         {isAuthenticated ? (
-          <Link to="/change-password">Change password</Link>
+          <>
+            <Link to="/sessions">Devices & sessions</Link>
+            <Link to="/change-password">Change password</Link>
+          </>
         ) : (
           <Link to="/login">Login</Link>
         )}
