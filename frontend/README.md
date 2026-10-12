@@ -38,13 +38,14 @@ frontend/
 - `npm run build` — typecheck + production bundle
 - `npm run preview` — serve `dist/`
 
-## Provider
+## Provider + auth gate
 
 `OpenChatApiProvider` wraps the app in `src/main.tsx` with `LocalStorageTokenStore`
-and `VITE_API_BASE_URL`. Child pages use `useOpenChatApi()` (see inbox health ping).
+and `VITE_API_BASE_URL`. `RequireAuth` protects `/`, `/sessions`, `/change-password`
+(token store; optional one `/auth/refresh`). Public: login, register, forgot, reset.
 
 ## Next slices
 
-See [ROADMAP.md](./ROADMAP.md): F1.6 auth gate → F2 inbox/profile.
+See [ROADMAP.md](./ROADMAP.md): F2 inbox/profile (auth gate is in place).
 
 > `frontend/` is tracked; `node_modules/`, `dist/`, and `.env` stay ignored via `frontend/.gitignore`.

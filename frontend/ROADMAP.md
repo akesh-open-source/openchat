@@ -25,7 +25,7 @@ Rules:
 | Kafka / realtime WS | [ ] | [ ] | [ ] |
 | Receipts / presence / groups / push | [ ] | [ ] | [ ] |
 
-**Immediate frontend work:** F0 scaffold done → F1 auth UI → F2 inbox/profile for finished backend APIs.
+**Immediate frontend work:** F1 auth done → F2 inbox/profile for finished backend APIs.
 
 ---
 
@@ -48,7 +48,7 @@ Rules:
 | 3 | Forgot / reset password | `feat/frontend-password-reset` | `feat(frontend): add forgot and reset password pages` | public flows | [x] |
 | 4 | Change password | `feat/frontend-change-password` | `feat(frontend): add authenticated change-password form` | Bearer required | [x] |
 | 5 | Sessions / devices | `feat/frontend-sessions-devices` | `feat(frontend): list devices and revoke sessions` | list + revoke session | [x] |
-| 6 | Auth gate | `feat/frontend-auth-gate` | `feat(frontend): protect routes with auth gate` | redirect unauthenticated users | [ ] |
+| 6 | Auth gate | `feat/frontend-auth-gate` | `feat(frontend): protect routes with auth gate` | redirect unauthenticated users | [x] |
 
 ---
 

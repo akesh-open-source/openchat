@@ -16,27 +16,19 @@ export function App() {
         <span className="muted">frontend scaffold</span>
       </header>
       <Routes>
-        <Route path="/" element={<InboxPage />} />
+        {/* Public auth routes — never gated */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route
-          path="/change-password"
-          element={
-            <RequireAuth>
-              <ChangePasswordPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/sessions"
-          element={
-            <RequireAuth>
-              <SessionsPage />
-            </RequireAuth>
-          }
-        />
+
+        {/* Protected — TokenStore access_token (or one refresh attempt) required */}
+        <Route element={<RequireAuth />}>
+          <Route path="/" element={<InboxPage />} />
+          <Route path="/change-password" element={<ChangePasswordPage />} />
+          <Route path="/sessions" element={<SessionsPage />} />
+        </Route>
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
