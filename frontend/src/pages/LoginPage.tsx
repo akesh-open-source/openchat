@@ -1,32 +1,16 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { isApiError } from "../api";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../hooks";
+import { formatApiDetail } from "../lib/apiError";
 import { getOrCreateDeviceId } from "../lib/deviceId";
-
-function formatApiDetail(error: unknown): string {
-  if (isApiError(error)) {
-    const detail = error.body?.detail;
-    if (typeof detail === "string") {
-      return detail;
-    }
-    if (detail != null) {
-      return JSON.stringify(detail);
-    }
-    return error.message;
-  }
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return String(error);
-}
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, loginState } = useAuth();
   const deviceId = useMemo(() => getOrCreateDeviceId(), []);
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => searchParams.get("email") ?? "");
   const [password, setPassword] = useState("");
   const [deviceName, setDeviceName] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
