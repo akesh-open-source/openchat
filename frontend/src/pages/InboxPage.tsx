@@ -68,7 +68,11 @@ export function InboxPage() {
       {error != null && <p className="error">{error}</p>}
 
       <nav className="nav">
-        <Link to="/login">Login</Link>
+        {isAuthenticated ? (
+          <Link to="/change-password">Change password</Link>
+        ) : (
+          <Link to="/login">Login</Link>
+        )}
         <Link to="/register">Register</Link>
       </nav>
     </main>
