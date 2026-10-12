@@ -25,7 +25,7 @@ Rules:
 | Kafka / realtime WS | [ ] | [ ] | [ ] |
 | Receipts / presence / groups / push | [ ] | [ ] | [ ] |
 
-**Immediate frontend work:** F0.1 scaffold is done → F0.2 track in git → F0.3 provider → F1/F2 screens for finished backend APIs.
+**Immediate frontend work:** F0 scaffold done → F1 auth UI → F2 inbox/profile for finished backend APIs.
 
 ---
 
@@ -35,7 +35,7 @@ Rules:
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | Vite + React + TS app in `frontend/` | `build/frontend-vite-scaffold` | `build(frontend): scaffold Vite React TypeScript app` | `package.json`, router, env `VITE_API_BASE_URL` | Gateway :8000 | [x] |
 | 2 | Track `frontend/` in git | `chore/frontend-gitignore` | `chore: track frontend directory in git` | Remove `frontend/` from root `.gitignore` | — | [x] |
-| 3 | Wire `OpenChatApiProvider` | `feat/frontend-api-provider` | `feat(frontend): wire OpenChatApiProvider at app root` | Root provider + token store | API layer | [x] provider exists; [ ] wired in app |
+| 3 | Wire `OpenChatApiProvider` | `feat/frontend-api-provider` | `feat(frontend): wire OpenChatApiProvider at app root` | Root provider + token store | API layer | [x] |
 
 ---
 

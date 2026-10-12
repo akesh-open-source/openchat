@@ -57,3 +57,22 @@ code {
 .muted {
   color: var(--muted);
 }
+
+.error {
+  color: #b91c1c;
+}
+
+button {
+  margin-top: 0.75rem;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
