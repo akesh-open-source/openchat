@@ -4,14 +4,14 @@ from dataclasses import dataclass
 
 from app.messaging.application.commands.list_messages import ListMessagesQuery
 from app.messaging.application.dto.message_list_cursor import MessageListCursor
-from app.messaging.application.ports.repositories.membership_repository import (
-    MembershipRepository,
-)
 from app.messaging.application.ports.repositories.message_repository import (
     MessageRepository,
 )
+from app.messaging.application.services.conversation_membership_guard import (
+    ConversationMembershipGuard,
+)
 from app.messaging.domain.entities.message import Message
-from app.messaging.domain.exceptions import ConversationNotFoundError, DomainError
+from app.messaging.domain.exceptions import DomainError
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,20 +22,17 @@ class ListMessagesResult:
 
 @dataclass(slots=True)
 class ListMessagesService:
-    membership_repository: MembershipRepository
+    membership_guard: ConversationMembershipGuard
     message_repository: MessageRepository
 
     async def execute(self, query: ListMessagesQuery) -> ListMessagesResult:
         if query.limit < 1 or query.limit > 100:
             raise DomainError("limit must be between 1 and 100")
 
-        membership = await self.membership_repository.get(
-            query.conversation_id,
-            query.user_id,
+        await self.membership_guard.require_member(
+            conversation_id=query.conversation_id,
+            user_id=query.user_id,
         )
-        if membership is None:
-            # Same 404 for missing conversation and non-member (no existence leak).
-            raise ConversationNotFoundError("Conversation not found")
 
         cursor: MessageListCursor | None = None
         if query.cursor:
