@@ -89,7 +89,73 @@ Non-members and unknown conversation ids both return **`404`**.
 
 ---
 
+## `GET /conversations/{conversation_id}/messages`
+
+Paginated history for one conversation. **Ordering authority is `sequence`
+(ascending)**, not `created_at`.
+
+Requires membership. Non-members and unknown conversation ids both return
+**`404`** (no existence leak).
+
+### Query
+
+| Param | Default | Notes |
+|---|---|---|
+| `limit` | `50` | 1–100 |
+| `cursor` | omitted | Opaque keyset cursor from a previous `next_cursor` |
+
+### Cursor
+
+Keyset on **`sequence ASC`**:
+
+- First page (no `cursor`): messages with the lowest sequences, up to `limit`.
+- `next_cursor` encodes the last item’s `sequence` on the page.
+- Next page: messages with `sequence` **greater than** that value.
+
+Pages are contiguous: if page 1 ends at sequence `N`, page 2 starts at
+`N + 1` (when that message exists). Do **not** use offset pagination; clients
+must pass the opaque `cursor` string as returned (do not invent offsets).
+
+Malformed `cursor` → **`400`**.
+
+### Response `200 OK`
+
+```json
+{
+  "items": [
+    {
+      "id": "0193f2a0-0000-7000-8000-000000000101",
+      "conversation_id": "0193f2a0-0000-7000-8000-0000000000aa",
+      "sender_id": "0193f2a0-0000-7000-8000-000000000001",
+      "client_message_id": "phone-abc-1",
+      "sequence": 1,
+      "body": "hello",
+      "status": "SENT",
+      "created_at": "2026-10-12T10:01:00Z"
+    }
+  ],
+  "next_cursor": "<opaque>|null"
+}
+```
+
+`next_cursor` is `null` when there is no further page.
+
+### Errors
+
+| Status | When |
+|---|---|
+| `400` | Malformed `cursor` |
+| `401` | Missing/invalid Bearer token |
+| `404` | Conversation missing **or** caller is not a member |
+| `422` | Invalid `limit` |
+
+### Authz
+
+Same as send: outsiders see **`404`**, not `403`.
+
+---
+
 ## Not yet implemented
 
-- `GET /conversations/{id}/messages` history pagination (Phase 2C #4)
 - Kafka / outbox publish (later slices)
+- `sync-since` / gap recovery (Phase 3)

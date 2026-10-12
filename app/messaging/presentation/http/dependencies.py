@@ -25,6 +25,7 @@ from app.messaging.application.services.get_or_create_direct_conversation_servic
 from app.messaging.application.services.list_conversations_service import (
     ListConversationsService,
 )
+from app.messaging.application.services.list_messages_service import ListMessagesService
 from app.messaging.application.services.send_message_service import SendMessageService
 
 from app.messaging.config.settings import settings
@@ -142,6 +143,22 @@ def get_send_message_service(
     ],
 ) -> SendMessageService:
     return SendMessageService(
+        membership_repository=membership_repository,
+        message_repository=message_repository,
+    )
+
+
+def get_list_messages_service(
+    membership_repository: Annotated[
+        MembershipRepository,
+        Depends(get_membership_repository),
+    ],
+    message_repository: Annotated[
+        MessageRepository,
+        Depends(get_message_repository),
+    ],
+) -> ListMessagesService:
+    return ListMessagesService(
         membership_repository=membership_repository,
         message_repository=message_repository,
     )

@@ -4,6 +4,7 @@ import asyncio
 from uuid import UUID, uuid4
 
 from app.messaging.application.dto.conversation_list_cursor import ConversationListCursor
+from app.messaging.application.dto.message_list_cursor import MessageListCursor
 from app.messaging.domain.entities.conversation import Conversation
 from app.messaging.domain.entities.membership import Membership
 from app.messaging.domain.entities.message import Message
@@ -166,6 +167,23 @@ class InMemoryMessageRepository:
             ):
                 return message
         return None
+
+    async def list_by_conversation(
+        self,
+        conversation_id: UUID,
+        *,
+        limit: int,
+        cursor: MessageListCursor | None = None,
+    ) -> list[Message]:
+        items = [
+            message
+            for message in self._by_id.values()
+            if message.conversation_id == conversation_id
+        ]
+        items.sort(key=lambda m: m.sequence)
+        if cursor is not None:
+            items = [message for message in items if message.sequence > cursor.sequence]
+        return items[:limit]
 
     async def create_with_next_sequence(
         self,

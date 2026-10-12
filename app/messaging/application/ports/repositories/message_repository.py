@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Protocol
 from uuid import UUID
 
+from app.messaging.application.dto.message_list_cursor import MessageListCursor
 from app.messaging.domain.entities.message import Message
 
 
@@ -22,6 +23,16 @@ class MessageRepository(Protocol):
         client_message_id: str,
     ) -> Message | None:
         """Return the message for this client idempotency key, or None."""
+        ...
+
+    async def list_by_conversation(
+        self,
+        conversation_id: UUID,
+        *,
+        limit: int,
+        cursor: MessageListCursor | None = None,
+    ) -> list[Message]:
+        """Return messages ordered by ``sequence ASC`` (keyset after cursor)."""
         ...
 
     async def create_with_next_sequence(

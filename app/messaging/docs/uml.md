@@ -231,7 +231,8 @@ flowchart LR
 | GET | `/conversations` |
 | GET | `/conversations/{conversation_id}` |
 
-Send/list message routes are not implemented yet; gateway still proxies `/messages/*`.
+Send and list (history pagination by `sequence`) message routes are implemented;
+gateway proxies `/conversations/.../messages`.
 
 ## Cross-service
 
