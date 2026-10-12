@@ -1,24 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { isApiError } from "../api";
 import { useAuth, useOpenChatApi } from "../hooks";
-
-function formatApiDetail(error: unknown): string {
-  if (isApiError(error)) {
-    const detail = error.body?.detail;
-    if (typeof detail === "string") {
-      return detail;
-    }
-    if (detail != null) {
-      return JSON.stringify(detail);
-    }
-    return error.message;
-  }
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return String(error);
-}
+import { formatApiDetail } from "../lib/apiError";
 
 /** Inbox shell — conversation list UI is F2.3. */
 export function InboxPage() {

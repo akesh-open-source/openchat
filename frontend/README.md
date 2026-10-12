@@ -45,6 +45,6 @@ and `VITE_API_BASE_URL`. Child pages use `useOpenChatApi()` (see inbox health pi
 
 ## Next slices
 
-See [ROADMAP.md](./ROADMAP.md): F1.2 register → rest of F1 → F2 inbox/profile.
+See [ROADMAP.md](./ROADMAP.md): F1.3 password reset → rest of F1 → F2 inbox/profile.
 
 > `frontend/` is tracked; `node_modules/`, `dist/`, and `.env` stay ignored via `frontend/.gitignore`.
