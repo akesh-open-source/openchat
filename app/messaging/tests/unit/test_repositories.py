@@ -133,8 +133,12 @@ class InMemoryConversationRepository:
 class InMemoryMessageRepository:
     """Fake MessageRepository for contract tests (no Postgres)."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        conversations: InMemoryConversationRepository | None = None,
+    ) -> None:
         self._by_id: dict[UUID, Message] = {}
+        self._conversations = conversations
 
     async def get_latest_by_conversation_ids(
         self,
@@ -149,6 +153,43 @@ class InMemoryMessageRepository:
             if current is None or message.sequence > current.sequence:
                 latest[message.conversation_id] = message
         return latest
+
+    async def get_by_client_message_id(
+        self,
+        conversation_id: UUID,
+        client_message_id: str,
+    ) -> Message | None:
+        for message in self._by_id.values():
+            if (
+                message.conversation_id == conversation_id
+                and message.client_message_id == client_message_id
+            ):
+                return message
+        return None
+
+    async def create_with_next_sequence(
+        self,
+        *,
+        conversation_id: UUID,
+        sender_id: UUID,
+        client_message_id: str,
+        body: str,
+    ) -> Message:
+        if self._conversations is None:
+            raise RuntimeError(
+                "InMemoryMessageRepository requires conversations for "
+                "create_with_next_sequence"
+            )
+        sequence = await self._conversations.allocate_next_sequence(conversation_id)
+        message = Message.create(
+            conversation_id=conversation_id,
+            sender_id=sender_id,
+            client_message_id=client_message_id,
+            sequence=sequence,
+            body=body,
+        )
+        await self.save(message)
+        return message
 
     async def save(self, message: Message) -> None:
         for existing in self._by_id.values():

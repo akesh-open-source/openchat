@@ -9,6 +9,7 @@ from app.messaging.application.commands.get_or_create_direct_conversation import
     GetOrCreateDirectConversationCommand,
 )
 from app.messaging.application.commands.list_conversations import ListConversationsQuery
+from app.messaging.application.commands.send_message import SendMessageCommand
 from app.messaging.application.dto.conversation_summary import ConversationSummary
 from app.messaging.application.services.get_conversation_service import (
     GetConversationService,
@@ -19,19 +20,26 @@ from app.messaging.application.services.get_or_create_direct_conversation_servic
 from app.messaging.application.services.list_conversations_service import (
     ListConversationsService,
 )
+from app.messaging.application.services.send_message_service import SendMessageService
 from app.messaging.domain.entities.conversation import Conversation
+from app.messaging.domain.entities.message import Message
 from app.messaging.presentation.http.dependencies import (
     get_access_token,
     get_current_user_id,
     get_get_conversation_service,
     get_get_or_create_direct_conversation_service,
     get_list_conversations_service,
+    get_send_message_service,
 )
 from app.messaging.presentation.http.schemas.conversations import (
     ConversationListResponse,
     ConversationResponse,
     CreateDirectConversationRequest,
     DirectConversationResponse,
+)
+from app.messaging.presentation.http.schemas.messages import (
+    MessageResponse,
+    SendMessageRequest,
 )
 
 router = APIRouter(
@@ -141,3 +149,40 @@ async def get_conversation(
         ),
     )
     return _to_conversation_response(summary)
+
+
+def _to_message_response(message: Message, *, created: bool) -> MessageResponse:
+    return MessageResponse(
+        id=message.id,
+        conversation_id=message.conversation_id,
+        sender_id=message.sender_id,
+        client_message_id=message.client_message_id,
+        sequence=message.sequence,
+        body=message.body,
+        status=message.status.value,
+        created_at=message.created_at,
+        created=created,
+    )
+
+
+@router.post(
+    "/{conversation_id}/messages",
+    response_model=MessageResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def send_message(
+    conversation_id: UUID,
+    body: SendMessageRequest,
+    user_id: UUID = Depends(get_current_user_id),
+    service: SendMessageService = Depends(get_send_message_service),
+) -> MessageResponse:
+    """Send a text message; retries with the same client_message_id return the original."""
+    result = await service.execute(
+        SendMessageCommand(
+            user_id=user_id,
+            conversation_id=conversation_id,
+            client_message_id=body.client_message_id,
+            body=body.body,
+        ),
+    )
+    return _to_message_response(result.message, created=result.created)
