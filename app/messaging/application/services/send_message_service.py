@@ -3,14 +3,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.messaging.application.commands.send_message import SendMessageCommand
+from app.messaging.application.ports.repositories.membership_repository import (
+    MembershipRepository,
+)
 from app.messaging.application.ports.repositories.message_repository import (
     MessageRepository,
 )
-from app.messaging.application.services.conversation_membership_guard import (
-    ConversationMembershipGuard,
-)
 from app.messaging.domain.entities.message import Message
-from app.messaging.domain.exceptions import MessageAlreadyExistsError
+from app.messaging.domain.exceptions import (
+    ConversationNotFoundError,
+    MessageAlreadyExistsError,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,14 +24,17 @@ class SendMessageResult:
 
 @dataclass(slots=True)
 class SendMessageService:
-    membership_guard: ConversationMembershipGuard
+    membership_repository: MembershipRepository
     message_repository: MessageRepository
 
     async def execute(self, command: SendMessageCommand) -> SendMessageResult:
-        await self.membership_guard.require_member(
-            conversation_id=command.conversation_id,
-            user_id=command.user_id,
+        membership = await self.membership_repository.get(
+            command.conversation_id,
+            command.user_id,
         )
+        if membership is None:
+            # Same 404 for missing conversation and non-member (no existence leak).
+            raise ConversationNotFoundError("Conversation not found")
 
         client_message_id = command.client_message_id.strip()
         existing = await self.message_repository.get_by_client_message_id(

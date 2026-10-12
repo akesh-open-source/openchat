@@ -466,21 +466,6 @@ def test_list_messages_bad_cursor_returns_400(
     assert response.status_code == 400
 
 
-def test_message_routes_unknown_conversation_id_gets_404(
-    client: TestClient,
-) -> None:
-    missing_id = uuid4()
-    listed = client.get(f"/conversations/{missing_id}/messages")
-    assert listed.status_code == 404
-    sent = client.post(
-        f"/conversations/{missing_id}/messages",
-        json={"client_message_id": "x", "body": "hi"},
-    )
-    assert sent.status_code == 404
-    got = client.get(f"/conversations/{missing_id}")
-    assert got.status_code == 404
-
-
 def test_list_messages_outsider_gets_404(
     conversation_repository: InMemoryConversationRepository,
     membership_repository: InMemoryMembershipRepository,

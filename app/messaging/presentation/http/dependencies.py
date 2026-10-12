@@ -16,9 +16,6 @@ from app.messaging.application.ports.repositories.message_repository import (
     MessageRepository,
 )
 from app.messaging.application.ports.users_client import UsersClient
-from app.messaging.application.services.conversation_membership_guard import (
-    ConversationMembershipGuard,
-)
 from app.messaging.application.services.get_conversation_service import (
     GetConversationService,
 )
@@ -112,23 +109,14 @@ def get_list_conversations_service(
     )
 
 
-def get_conversation_membership_guard(
-    membership_repository: Annotated[
-        MembershipRepository,
-        Depends(get_membership_repository),
-    ],
-) -> ConversationMembershipGuard:
-    return ConversationMembershipGuard(membership_repository=membership_repository)
-
-
 def get_get_conversation_service(
     conversation_repository: Annotated[
         ConversationRepository,
         Depends(get_conversation_repository),
     ],
-    membership_guard: Annotated[
-        ConversationMembershipGuard,
-        Depends(get_conversation_membership_guard),
+    membership_repository: Annotated[
+        MembershipRepository,
+        Depends(get_membership_repository),
     ],
     message_repository: Annotated[
         MessageRepository,
@@ -138,16 +126,16 @@ def get_get_conversation_service(
 ) -> GetConversationService:
     return GetConversationService(
         conversation_repository=conversation_repository,
-        membership_guard=membership_guard,
+        membership_repository=membership_repository,
         message_repository=message_repository,
         users_client=users_client,
     )
 
 
 def get_send_message_service(
-    membership_guard: Annotated[
-        ConversationMembershipGuard,
-        Depends(get_conversation_membership_guard),
+    membership_repository: Annotated[
+        MembershipRepository,
+        Depends(get_membership_repository),
     ],
     message_repository: Annotated[
         MessageRepository,
@@ -155,15 +143,15 @@ def get_send_message_service(
     ],
 ) -> SendMessageService:
     return SendMessageService(
-        membership_guard=membership_guard,
+        membership_repository=membership_repository,
         message_repository=message_repository,
     )
 
 
 def get_list_messages_service(
-    membership_guard: Annotated[
-        ConversationMembershipGuard,
-        Depends(get_conversation_membership_guard),
+    membership_repository: Annotated[
+        MembershipRepository,
+        Depends(get_membership_repository),
     ],
     message_repository: Annotated[
         MessageRepository,
@@ -171,7 +159,7 @@ def get_list_messages_service(
     ],
 ) -> ListMessagesService:
     return ListMessagesService(
-        membership_guard=membership_guard,
+        membership_repository=membership_repository,
         message_repository=message_repository,
     )
 

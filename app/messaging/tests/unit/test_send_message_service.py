@@ -6,9 +6,6 @@ from uuid import uuid4
 import pytest
 
 from app.messaging.application.commands.send_message import SendMessageCommand
-from app.messaging.application.services.conversation_membership_guard import (
-    ConversationMembershipGuard,
-)
 from app.messaging.application.services.send_message_service import SendMessageService
 from app.messaging.domain.entities.conversation import Conversation
 from app.messaging.domain.entities.membership import Membership
@@ -31,7 +28,7 @@ def _service() -> tuple[
     conversations = InMemoryConversationRepository(memberships)
     messages = InMemoryMessageRepository(conversations)
     service = SendMessageService(
-        membership_guard=ConversationMembershipGuard(membership_repository=memberships),
+        membership_repository=memberships,
         message_repository=messages,
     )
     return service, conversations, memberships, messages
