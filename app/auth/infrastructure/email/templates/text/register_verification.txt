@@ -1,0 +1,16 @@
+Hello {{ display_name }},
+
+Thanks for signing up for {{ app_name }}. Please verify {{ email }} to finish
+creating your account.
+
+Complete registration:
+{{ verify_link }}
+
+Or use this token with POST /auth/complete-register:
+{{ verify_token }}
+
+This link expires in {{ expires_minutes }} minutes.
+
+If you did not sign up, you can ignore this email.
+
+— {{ app_name }}

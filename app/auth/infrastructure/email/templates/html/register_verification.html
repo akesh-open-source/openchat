@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Verify your {{ app_name }} email</title>
+  </head>
+  <body>
+    <p>Hello {{ display_name }},</p>
+    <p>
+      Thanks for signing up for {{ app_name }}. Please verify
+      <strong>{{ email }}</strong> to finish creating your account.
+    </p>
+    <p>
+      <a href="{{ verify_link }}">Complete registration</a>
+    </p>
+    <p>Or use this token with <code>POST /auth/complete-register</code>:</p>
+    <p><code>{{ verify_token }}</code></p>
+    <p>This link expires in {{ expires_minutes }} minutes.</p>
+    <p>If you did not sign up, you can ignore this email.</p>
+    <p>— {{ app_name }}</p>
+  </body>
+</html>

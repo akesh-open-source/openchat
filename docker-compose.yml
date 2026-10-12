@@ -1,0 +1,216 @@
+# Database-per-service: each service owns its own PostgreSQL.
+# Do not share databases across services (ADR-009).
+#
+# Env files:
+#   app/auth/.env       — postgres-auth + auth (see app/auth/.env.example)
+#   app/users/.env      — postgres-users + users (see app/users/.env.example)
+#   app/messaging/.env  — postgres-messaging + messaging (see app/messaging/.env.example)
+#   app/gateway/.env    — gateway (see app/gateway/.env.example)
+# JWT keys:
+#   secrets/jwt/private.pem — auth only (see secrets/jwt/README.md)
+#   secrets/jwt/public.pem  — auth + gateway + users + messaging
+#
+# Networks:
+#   auth-internal       — postgres-auth ↔ auth-redis ↔ auth (DB/cache not on edge)
+#   users-internal      — postgres-users ↔ users (DB not on edge)
+#   messaging-internal  — postgres-messaging ↔ messaging (DB not on edge)
+#   edge                — gateway ↔ auth ↔ users ↔ messaging ↔ mailpit (and later other services)
+
+services:
+  postgres-auth:
+    image: postgres:16-alpine
+    env_file:
+      - app/auth/.env
+    volumes:
+      - postgres_auth_data:/var/lib/postgresql/data
+    networks:
+      - auth-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Internal only — not published to the host.
+
+  auth-redis:
+    image: redis:7-alpine
+    networks:
+      - auth-internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # no host ports — internal only
+
+  postgres-users:
+    image: postgres:16-alpine
+    env_file:
+      - app/users/.env
+    volumes:
+      - postgres_users_data:/var/lib/postgresql/data
+    networks:
+      - users-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Internal only — not published to the host.
+
+  postgres-messaging:
+    image: postgres:16-alpine
+    env_file:
+      - app/messaging/.env
+    volumes:
+      - postgres_messaging_data:/var/lib/postgresql/data
+    networks:
+      - messaging-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Internal only — not published to the host.
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI
+    networks:
+      - edge
+
+  auth:
+    build:
+      context: .
+      dockerfile: app/auth/Dockerfile
+    env_file:
+      - app/auth/.env
+    volumes:
+      # Private key only on auth (sign). Public for self-verify.
+      - ./secrets/jwt/private.pem:/run/secrets/jwt_private.pem:ro
+      - ./secrets/jwt/public.pem:/run/secrets/jwt_public.pem:ro
+    ports:
+      - "8001:8001"
+    networks:
+      - auth-internal
+      - edge
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+      auth-redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+      users:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/openapi.json')",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  users:
+    build:
+      context: .
+      dockerfile: app/users/Dockerfile
+    env_file:
+      - app/users/.env
+    volumes:
+      # Public key only — users verifies access JWTs (gateway also verifies).
+      - ./secrets/jwt/public.pem:/run/secrets/jwt_public.pem:ro
+    ports:
+      - "8002:8002"
+    networks:
+      - users-internal
+      - edge
+    depends_on:
+      postgres-users:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/health')",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  messaging:
+    build:
+      context: .
+      dockerfile: app/messaging/Dockerfile
+    env_file:
+      - app/messaging/.env
+    volumes:
+      # Public key only — messaging verifies access JWTs (gateway also verifies).
+      - ./secrets/jwt/public.pem:/run/secrets/jwt_public.pem:ro
+    ports:
+      - "8003:8003"
+    networks:
+      - messaging-internal
+      - edge
+    depends_on:
+      postgres-messaging:
+        condition: service_healthy
+      users:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8003/health')",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  gateway:
+    build:
+      context: .
+      dockerfile: app/gateway/Dockerfile
+    env_file:
+      - app/gateway/.env
+    volumes:
+      # Public key only — gateway can verify, never mint tokens.
+      - ./secrets/jwt/public.pem:/run/secrets/jwt_public.pem:ro
+    ports:
+      - "8000:8000"
+    networks:
+      - edge
+    depends_on:
+      auth:
+        condition: service_healthy
+      users:
+        condition: service_healthy
+      messaging:
+        condition: service_healthy
+
+networks:
+  auth-internal:
+    internal: true
+  users-internal:
+    internal: true
+  messaging-internal:
+    internal: true
+  edge:
+
+volumes:
+  postgres_auth_data:
+  postgres_users_data:
+  postgres_messaging_data:

@@ -1,0 +1,12 @@
+Hello {{ display_name }},
+
+Welcome to {{ app_name }}! Your account was created successfully.
+
+Email: {{ email }}
+
+Sign in:
+{{ login_url }}
+
+If you did not create this account, please contact support.
+
+— {{ app_name }}
