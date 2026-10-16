@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.messaging.application.dto.message_list_cursor import MessageListCursor
 from app.messaging.domain.entities.conversation import Conversation
 from app.messaging.domain.entities.message import Message
+from app.messaging.domain.entities.outbox_event import OutboxEvent
 from app.messaging.domain.exceptions import (
     ConversationNotFoundError,
     MessageAlreadyExistsError,
@@ -19,6 +20,9 @@ from app.messaging.infrastructure.persistence.postgres.mappers.conversation_mapp
 from app.messaging.infrastructure.persistence.postgres.mappers.message_mapper import (
     to_domain,
     to_model,
+)
+from app.messaging.infrastructure.persistence.postgres.mappers.outbox_event_mapper import (
+    to_model as outbox_to_model,
 )
 from app.messaging.infrastructure.persistence.postgres.models.conversation import (
     ConversationModel,
@@ -116,7 +120,12 @@ class PostgresMessageRepository:
                     sequence=sequence,
                     body=body,
                 )
+                # Same nested txn / savepoint as the message (ADR-008).
+                # Kafka publish is NOT done here — Phase 3 outbox publisher.
                 self._session.add(to_model(message))
+                self._session.add(
+                    outbox_to_model(OutboxEvent.for_message_created(message))
+                )
                 await self._session.flush()
                 return message
         except IntegrityError as exc:

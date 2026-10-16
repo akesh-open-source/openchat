@@ -43,7 +43,10 @@ class MessageRepository(Protocol):
         client_message_id: str,
         body: str,
     ) -> Message:
-        """Lock conversation, assign ``sequence``, insert message in one unit.
+        """Lock conversation, assign ``sequence``, insert message + outbox.
+
+        Message and ``message.created`` outbox row are written in the **same**
+        DB transaction/savepoint. Does not publish to Kafka.
 
         Raises ``MessageAlreadyExistsError`` on unique conflicts.
         Raises ``ConversationNotFoundError`` if the conversation row is missing.

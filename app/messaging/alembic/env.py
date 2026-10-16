@@ -23,6 +23,7 @@ from app.messaging.infrastructure.persistence.postgres.models import (  # noqa: 
     ConversationModel,
     MembershipModel,
     MessageModel,
+    OutboxEventModel,
 )
 
 config = context.config

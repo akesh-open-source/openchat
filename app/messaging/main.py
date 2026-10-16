@@ -10,7 +10,8 @@ from app.messaging.presentation.http.routes import router
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    # Stub: wire Kafka / outbox publisher here when needed (Phase 3).
+    # Stub: wire Kafka / outbox publisher here when needed (Phase 3E).
+    # Outbox table + same-txn write already exist (Phase 2C #6).
     yield
     await dispose_engine()
 

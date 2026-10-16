@@ -8,6 +8,7 @@ from app.messaging.application.dto.message_list_cursor import MessageListCursor
 from app.messaging.domain.entities.conversation import Conversation
 from app.messaging.domain.entities.membership import Membership
 from app.messaging.domain.entities.message import Message
+from app.messaging.domain.entities.outbox_event import MESSAGE_CREATED, OutboxEvent
 from app.messaging.domain.exceptions import (
     ConversationNotFoundError,
     MessageAlreadyExistsError,
@@ -131,15 +132,47 @@ class InMemoryConversationRepository:
             return conversation.allocate_next_sequence()
 
 
+class InMemoryOutboxRepository:
+    """Fake OutboxRepository for contract tests (no Postgres / no Kafka)."""
+
+    def __init__(self) -> None:
+        self._items: list[OutboxEvent] = []
+        self._committed: list[OutboxEvent] = []
+        self._fail_on_save = False
+
+    def begin(self) -> None:
+        self._items = list(self._committed)
+
+    def commit(self) -> None:
+        self._committed = list(self._items)
+
+    def rollback(self) -> None:
+        self._items = list(self._committed)
+
+    async def save(self, event: OutboxEvent) -> None:
+        if self._fail_on_save:
+            raise RuntimeError("forced outbox failure")
+        self._items.append(event)
+
+    async def list_by_aggregate_id(self, aggregate_id: UUID) -> list[OutboxEvent]:
+        return [event for event in self._items if event.aggregate_id == aggregate_id]
+
+    async def count(self) -> int:
+        return len(self._items)
+
+
 class InMemoryMessageRepository:
     """Fake MessageRepository for contract tests (no Postgres)."""
 
     def __init__(
         self,
         conversations: InMemoryConversationRepository | None = None,
+        outbox: InMemoryOutboxRepository | None = None,
     ) -> None:
         self._by_id: dict[UUID, Message] = {}
         self._conversations = conversations
+        self._outbox = outbox
+        self._fail_after_message = False
 
     async def get_latest_by_conversation_ids(
         self,
@@ -207,6 +240,11 @@ class InMemoryMessageRepository:
             body=body,
         )
         await self.save(message)
+        if self._outbox is not None:
+            await self._outbox.save(OutboxEvent.for_message_created(message))
+        if self._fail_after_message:
+            # Simulate mid-txn failure after message (+ outbox) write.
+            raise RuntimeError("forced send failure")
         return message
 
     async def save(self, message: Message) -> None:
