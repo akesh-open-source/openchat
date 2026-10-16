@@ -46,6 +46,26 @@ MVP ordering authority: `SELECT conversation FOR UPDATE`, bump
 `conversations.next_sequence`, insert message with that `sequence` in the same
 transaction.
 
+### Transactional outbox (no Kafka publish yet)
+
+On successful insert (not on idempotent retry), messaging also writes a
+`message.created` row to `outbox_events` in the **same DB transaction** as the
+message (ADR-008). Rollback removes both — there is no orphan message or
+outbox row.
+
+| Column | Role |
+|---|---|
+| `id` | Outbox event UUID |
+| `event_type` | e.g. `message.created` |
+| `aggregate_type` / `aggregate_id` | `message` + message id |
+| `conversation_id` | Kafka partition key later |
+| `payload` | JSON snapshot for publishers |
+| `created_at` | Insert time |
+| `published_at` | `null` until Phase 3 publisher |
+
+This slice does **not** publish to Kafka. Marking rows published / producer
+loop is Phase 3E.
+
 ---
 
 ## `POST /conversations/{conversation_id}/messages`
@@ -172,5 +192,5 @@ Outsiders see **`404`**, not `403`.
 
 ## Not yet implemented
 
-- Kafka / outbox publish (later slices)
+- Outbox → Kafka publisher (Phase 3E; table + same-txn write already exist)
 - `sync-since` / gap recovery (Phase 3)
